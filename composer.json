@@ -14,7 +14,7 @@
         "speedwork/util" : "dev-master"
     },
     "autoload" : {
-        "psr-4": { "Speedwork\\Core": "src" }
+        "psr-4": { "Speedwork\\Core\\": "src" }
     },
     "minimum-stability": "dev"
 }
