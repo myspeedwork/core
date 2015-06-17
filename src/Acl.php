@@ -8,14 +8,19 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-
 namespace Speedwork\Core;
+
+use Cake\Event\Event;
+use Cake\Event\EventManagerTrait;
+use Speedwork\Config\Configure;
 
 /**
  * @author sankar <sankar.suda@gmail.com>
  */
 class Acl extends Controller
 {
+    use EventManagerTrait;
+
     private $permissions = [];
 
     public function getLoginFields()
@@ -72,17 +77,17 @@ class Acl extends Controller
     */
     public function isUserLoggedIn()
     {
-        if (self::lookupCookies()) {
-            if (!self::checkIsUserLoggedIn($_COOKIE[COOKIE_NAME], $_COOKIE[COOKIE_KEY])) {
-                self::logout();
+        if ($this->lookupCookies()) {
+            if (!$this->checkIsUserLoggedIn($_COOKIE[COOKIE_NAME], $_COOKIE[COOKIE_KEY])) {
+                $this->logout();
 
                 return false;
             } else {
-                if (!self::lookupSessions()) {
-                    $_SESSION[COOKIE_NAME]    = $_COOKIE[COOKIE_NAME];
-                    $_SESSION[COOKIE_KEY]     = $_COOKIE[COOKIE_KEY];
+                if (!$this->lookupSessions()) {
+                    $_SESSION[COOKIE_NAME] = $_COOKIE[COOKIE_NAME];
+                    $_SESSION[COOKIE_KEY]  = $_COOKIE[COOKIE_KEY];
                 } elseif (strcmp($_COOKIE[COOKIE_NAME], $_SESSION[COOKIE_NAME])  || strcmp($_COOKIE[COOKIE_KEY], $_SESSION[COOKIE_KEY])) {
-                    self::logout();
+                    $this->logout();
 
                     return false;
                 }
@@ -90,8 +95,8 @@ class Acl extends Controller
                 return true;
             }
         }
-        if (self::lookupSessions()) {
-            if (!self::checkIsUserLoggedIn($_SESSION[COOKIE_NAME], $_SESSION[COOKIE_KEY])) {
+        if ($this->lookupSessions()) {
+            if (!$this->checkIsUserLoggedIn($_SESSION[COOKIE_NAME], $_SESSION[COOKIE_KEY])) {
                 return false;
             }
 
@@ -152,7 +157,7 @@ class Acl extends Controller
             'username' => $username,
             'passowrd' => $password,
         ]);
-        EventManager::instance()->dispatch($event);
+        $this->eventManager()->dispatch($event);
 
         if ($event->isStopped()) {
             if (isset($event->result)) {
@@ -219,7 +224,7 @@ class Acl extends Controller
             'plain_password' => $password,
             'user'           => $row,
         ]);
-        EventManager::instance()->dispatch($event);
+        $this->eventManager()->dispatch($event);
 
         return true;
     }
@@ -293,7 +298,7 @@ class Acl extends Controller
     public function logout()
     {
         //call the hooks
-        EventManager::instance()->dispatch('event.members.before.logout');
+        $this->eventManager()->dispatch('event.members.before.logout');
 
         @setcookie(COOKIE_NAME, '', time() - COOKIE_TIME, COOKIE_PATH);
         @setcookie(COOKIE_KEY, '', time() - COOKIE_TIME, COOKIE_PATH);
@@ -319,12 +324,12 @@ class Acl extends Controller
 
         return true;
 
-        $new_pass        = self::generateUniqueId();
-        $activation_key  = self::generateActivationKey();
+        $new_pass       = $this->generateUniqueId();
+        $activation_key = $this->generateActivationKey();
 
-        $new_md5    = salt($new_pass);
+        $new_md5 = salt($new_pass);
 
-        $result    = $this->database->update('#__users', [
+        $result = $this->database->update('#__users', [
             'password'       => $new_md5,
             'last_pw_change' => time(),
             'activation_key' => $activation_key,
@@ -352,7 +357,7 @@ class Acl extends Controller
             'userid'   => $userid,
             'passowrd' => $new_password,
         ]);
-        EventManager::instance()->dispatch($event);
+        $this->eventManager()->dispatch($event);
 
         return $this->database->update('#__users', [
             'password' => $new_password, 'last_pw_change' => time(),
@@ -369,8 +374,8 @@ class Acl extends Controller
         }
 
         //find user exists in database
-        $conditions    = [];
-        $conditions[]  = $this->getMatches($username);
+        $conditions   = [];
+        $conditions[] = $this->getMatches($username);
 
         $row = $this->database->find('#__users', 'first', [
             'conditions' => $conditions,
@@ -381,10 +386,10 @@ class Acl extends Controller
             return false;
         }
 
-        $new_pass        = self::generateUniqueId();
-        $activation_key  = self::generateActivationKey();
+        $new_pass       = $this->generateUniqueId();
+        $activation_key = $this->generateActivationKey();
 
-        $new_md5    = salt($new_pass);
+        $new_md5 = salt($new_pass);
 
         $result = $this->database->update('#__users', [
             'password'       => $new_md5,
@@ -416,7 +421,7 @@ class Acl extends Controller
         }
 
         $password = '';
-        for ($i = 0; $i < $length; $i++) {
+        for ($i = 0; $i < $length; ++$i) {
             $password .= substr($chars, rand(0, strlen($chars) - 1), 1);
         }
 
@@ -432,7 +437,7 @@ class Acl extends Controller
      */
     public function usernameExists($username)
     {
-        if ($user = self::getUserBy('username', $username)) {
+        if ($user = $this->getUserBy('username', $username)) {
             return $user;
         } else {
             return;
@@ -448,7 +453,7 @@ class Acl extends Controller
      */
     public function emailExists($email)
     {
-        if ($user = self::getUserByEmail($email)) {
+        if ($user = $this->getUserByEmail($email)) {
             return $user;
         }
 
@@ -466,7 +471,7 @@ class Acl extends Controller
     {
         $conditions[] = $this->getMatches($username);
 
-        return self::getUserBy('', $username, $conditions);
+        return $this->getUserBy('', $username, $conditions);
     }
 
     /**
@@ -478,7 +483,7 @@ class Acl extends Controller
      */
     public function getUserByEmail($email)
     {
-        return self::getUserBy('email', $email);
+        return $this->getUserBy('email', $email);
     }
 
     /**
@@ -553,7 +558,7 @@ class Acl extends Controller
 
     public function generateActivationKey($length = 9)
     {
-        return self::generatePassword($length);
+        return $this->generatePassword($length);
     }
 
     /**
@@ -726,7 +731,7 @@ class Acl extends Controller
 
         $default = Configure::read('public_permissions');
         if (!is_array($default)) {
-            $default =  explode('||', $default);
+            $default = explode('||', $default);
         }
 
         if (count($default) > 0) {
@@ -830,13 +835,13 @@ class Acl extends Controller
         // get group permissions
         $permissions = $_permissions['group'];
         if ($permissions && is_array($permissions)) {
-            $return = self::isPermitted($component, $view, $task, $permissions);
+            $return = $this->isPermitted($component, $view, $task, $permissions);
         }
 
         // get include permissions
         $permissions = $_permissions['include'];
         if (!$return && $permissions && is_array($permissions)) {
-            if (self::isPermitted($component, $view, $task, $permissions)) {
+            if ($this->isPermitted($component, $view, $task, $permissions)) {
                 $return = true;
             }
         }
@@ -844,7 +849,7 @@ class Acl extends Controller
         // get exclude permissions
         $permissions = $_permissions['exclude'];
         if ($return && $permissions && is_array($permissions)) {
-            if (self::isPermitted($component, $view, $task, $permissions)) {
+            if ($this->isPermitted($component, $view, $task, $permissions)) {
                 $return = false;
             }
         }
@@ -852,7 +857,7 @@ class Acl extends Controller
         // get user exclude permissions
         $permissions = $_permissions['user_exclude'];
         if ($return && $permissions && is_array($permissions)) {
-            if (self::isPermitted($component, $view, $task, $permissions)) {
+            if ($this->isPermitted($component, $view, $task, $permissions)) {
                 $return = false;
             }
         }
@@ -860,7 +865,7 @@ class Acl extends Controller
         // get user include permissions
         $permissions = $_permissions['user_include'];
         if (!$return && $permissions && is_array($permissions)) {
-            if (self::isPermitted($component, $view, $task, $permissions)) {
+            if ($this->isPermitted($component, $view, $task, $permissions)) {
                 $return = true;
             }
         }
@@ -876,7 +881,7 @@ class Acl extends Controller
                 }
             }
 
-            $returns = self::isPermitted($component, $view, $task, $perms, true);
+            $returns = $this->isPermitted($component, $view, $task, $perms, true);
             $return  = (is_bool($returns)) ? $returns : $return;
         }
 

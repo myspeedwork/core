@@ -8,11 +8,10 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-
 namespace Speedwork\Core;
 
 use Exception;
-use Util\Utility;
+use Speedwork\Util\Utility;
 
 /**
  * @author sankar <sankar.suda@gmail.com>
@@ -127,12 +126,12 @@ class Application extends Controller
             return $instances[$signature];
         }
 
-        $controller   = $instances[$signature];
+        $controller = $instances[$signature];
 
         $method = ($view) ? $view : 'index';
         $method = strtolower($method);
 
-        Template::$path = $url.'components/'.$component.'/assets/';
+        $this->template->setPath($url.'components/'.$component.'/assets/');
 
         $beforeRender = 'beforeRender';
 
@@ -210,22 +209,22 @@ class Application extends Controller
 
     public function loadView($component, $view = '', $type = 'component')
     {
-        $type        = (empty($type)) ? 'component' : $type;
-        $component   = $this->sanitize($component, $type);
-        $folder      = ($type == 'component') ? 'components' : 'modules';
+        $type      = (empty($type)) ? 'component' : $type;
+        $component = $this->sanitize($component, $type);
+        $folder    = ($type == 'component') ? 'components' : 'modules';
 
-        $url     = $this->getPath($component, $type);
-        $path    = $url['path'];
+        $url  = $this->getPath($component, $type);
+        $path = $url['path'];
 
-        $view     = strtolower(trim($view));
-        $views    = [];
-        $views[]  = _TMP_PATH.$folder.DS.$component.DS.(($view) ? $view : 'index').'.tpl';
-        $views[]  = $path.$folder.DS.$component.DS.'views'.DS.(($view) ? $view : 'index').'.tpl';
+        $view    = strtolower(trim($view));
+        $views   = [];
+        $views[] = _TMP_PATH.$folder.DS.$component.DS.(($view) ? $view : 'index').'.tpl';
+        $views[] = $path.$folder.DS.$component.DS.'views'.DS.(($view) ? $view : 'index').'.tpl';
 
         $view_file = '';
         foreach ($views as $file) {
             if (file_exists($file)) {
-                $view_file =  $file;
+                $view_file = $file;
                 break;
             }
         }
@@ -346,8 +345,8 @@ class Application extends Controller
             $instances = [];
         }
 
-        $module       = $this->sanitize($module, 'module');
-        $signature    = 'Mod'.$module;
+        $module    = $this->sanitize($module, 'module');
+        $signature = 'Mod'.$module;
 
         if (empty($instances[$signature])) {
             $url  = $this->getPath($module, 'module');
@@ -373,7 +372,7 @@ class Application extends Controller
             $instances[$signature]['object'] = new $class_name();
         }
 
-        Template::$path = $instances[$signature]['path'].'modules/'.$module.'/assets/';
+        $this->template->setPath($instances[$signature]['path'].'modules/'.$module.'/assets/');
 
         $action = &$instances[$signature]['object'];
 
@@ -434,8 +433,8 @@ class Application extends Controller
                 );
 
                 if ($data['config']) {
-                    $options  = json_decode($data['config'], true);
-                    $options  = $options['custom'];
+                    $options = json_decode($data['config'], true);
+                    $options = $options['custom'];
                 }
             }
             $view = '';
@@ -544,7 +543,7 @@ class Application extends Controller
             return $res;
         }
 
-        $rows  = count($res);
+        $rows = count($res);
 
         $modules = $this->_modules[$position];
 
@@ -566,8 +565,8 @@ class Application extends Controller
             }
             $options = [];
             if ($data['config']) {
-                $opt      = json_decode($data['config'], true);
-                $options  = $opt['custom'];
+                $opt     = json_decode($data['config'], true);
+                $options = $opt['custom'];
             }
             unset($opt);
             $options['position'] = $position;
@@ -590,28 +589,28 @@ class Application extends Controller
             $instances = [];
         }
 
-        $signature    = 'Helper'.strtolower($helperName);
+        $signature = 'Helper'.strtolower($helperName);
 
         if ($instances[$signature]) {
             return $instances[$signature];
         }
 
-        $helperName    = explode('.', $helperName);
-        $component     = $helperName[1];
+        $helperName = explode('.', $helperName);
+        $component  = $helperName[1];
 
-        $component        = explode(':', $component);
-        $group            = $component[1];
-        $component        = $component[0];
+        $component = explode(':', $component);
+        $group     = $component[1];
+        $component = $component[0];
 
-        $helper   = $helperName[0];
+        $helper = $helperName[0];
 
         $paths       = [];
         $helperClass = ucfirst($helper).'Helper';
 
         if ($component) {
-            $component    = $this->sanitize($component);
-            $url          = $this->getPath($component);
-            $dir          = $url['path'];
+            $component = $this->sanitize($component);
+            $url       = $this->getPath($component);
+            $dir       = $url['path'];
 
             $paths[] = [
                 'file'  => $dir.'components'.DS.$component.DS.'helpers'.DS.(($group) ? $group.DS : '').$helperClass.'.php',
@@ -635,8 +634,8 @@ class Application extends Controller
 
                 require_once $path['file'];
 
-                $beforeRun   = 'beforeRun';
-                $instance    = new $helperClass();
+                $beforeRun = 'beforeRun';
+                $instance  = new $helperClass();
 
                 if (method_exists($instance, $beforeRun)) {
                     $instance->$beforeRun();
@@ -664,23 +663,23 @@ class Application extends Controller
             $instances = [];
         }
 
-        $signature  = 'Widget'.strtolower($name);
+        $signature = 'Widget'.strtolower($name);
 
         if (!$instances[$signature]) {
-            $widgetName   = explode(':', $name);
-            $component    = $widgetName[1];
+            $widgetName = explode(':', $name);
+            $component  = $widgetName[1];
 
-            $widget1      = explode('.', $widgetName[0]);
-            $widget       = $widget1[0];
-            $view         = $widget1[1];
+            $widget1 = explode('.', $widgetName[0]);
+            $widget  = $widget1[0];
+            $view    = $widget1[1];
 
-            $widgetClass   = ($view) ? ucfirst($view).'Widget' : ucfirst($widget).'Widget';
+            $widgetClass = ($view) ? ucfirst($view).'Widget' : ucfirst($widget).'Widget';
 
             if ($component) {
-                $component    = $this->sanitize($component);
-                $url          = $this->getPath($component);
-                $dir          = $url['path'];
-                $url          = $url['url'];
+                $component = $this->sanitize($component);
+                $url       = $this->getPath($component);
+                $dir       = $url['path'];
+                $url       = $url['url'];
 
                 $paths[] = [
                     'file'  => $dir.'components'.DS.$component.DS.'widgets'.DS.$widget.DS.$widgetClass.'.php',
@@ -733,11 +732,11 @@ class Application extends Controller
             }
         }
 
-        $instance       = $instances[$signature]['object'];
-        Template::$path = $instances[$signature]['url'];
+        $instance = $instances[$signature]['object'];
+        $this->template->setPath($instances[$signature]['url']);
 
-        $beforeRun   = 'beforeRun';
-        $afterRun    = 'afterRun';
+        $beforeRun = 'beforeRun';
+        $afterRun  = 'afterRun';
 
         if (!is_array($options['options'])) {
             $options['options'] = [];
