@@ -65,7 +65,7 @@ class Acl extends Controller
     */
     private function lookupSessions()
     {
-        if (empty($_SESSION[COOKIE_NAME]) || empty($_SESSION[COOKIE_KEY])) {
+        if (!$this->session->has(COOKIE_NAME) || !$this->session->has(COOKIE_KEY)) {
             return false;
         }
 
@@ -84,9 +84,10 @@ class Acl extends Controller
                 return false;
             } else {
                 if (!$this->lookupSessions()) {
-                    $_SESSION[COOKIE_NAME] = $_COOKIE[COOKIE_NAME];
-                    $_SESSION[COOKIE_KEY]  = $_COOKIE[COOKIE_KEY];
-                } elseif (strcmp($_COOKIE[COOKIE_NAME], $_SESSION[COOKIE_NAME])  || strcmp($_COOKIE[COOKIE_KEY], $_SESSION[COOKIE_KEY])) {
+                    $this->session->set(COOKIE_NAME, $_COOKIE[COOKIE_NAME]);
+                    $this->session->set(COOKIE_KEY, $_COOKIE[COOKIE_KEY]);
+                } elseif (strcmp($_COOKIE[COOKIE_NAME], $this->session->get(COOKIE_NAME))
+                    || strcmp($_COOKIE[COOKIE_KEY], $this->session->get(COOKIE_KEY))) {
                     $this->logout();
 
                     return false;
@@ -96,7 +97,7 @@ class Acl extends Controller
             }
         }
         if ($this->lookupSessions()) {
-            if (!$this->checkIsUserLoggedIn($_SESSION[COOKIE_NAME], $_SESSION[COOKIE_KEY])) {
+            if (!$this->checkIsUserLoggedIn($this->session->get(COOKIE_NAME), $this->session->get(COOKIE_KEY))) {
                 return false;
             }
 
@@ -151,7 +152,6 @@ class Acl extends Controller
      */
     public function logUserIn($username, $password, $remember = false, $hash = true)
     {
-
         //call the Event
         $event = new Event('event.members.before.login', $this, [
             'username' => $username,
@@ -199,8 +199,8 @@ class Acl extends Controller
             return false;
         }
 
-        $_SESSION[COOKIE_NAME] = $username;
-        $_SESSION[COOKIE_KEY]  = $key;
+        $this->session->set(COOKIE_NAME, $username);
+        $this->session->set(COOKIE_KEY, $key);
 
         $this->sets('username', $username);
         $this->sets('user', $row);
@@ -212,7 +212,7 @@ class Acl extends Controller
 
         $this->database->update('#__users', [
             'last_signin' => time(),
-            'ip'          => $_SERVER['REMOTE_ADDR'],
+            'ip'          => $this->server['REMOTE_ADDR'],
             ], ['userid' => $userid]
         );
 
@@ -304,7 +304,7 @@ class Acl extends Controller
         @setcookie(COOKIE_KEY, '', time() - COOKIE_TIME, COOKIE_PATH);
         @setcookie(COOKIE_UID, '', time() - COOKIE_TIME, COOKIE_PATH);
 
-        Session::destroy();
+        $this->session->clear();
 
         return true;
     }
