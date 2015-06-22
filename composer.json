@@ -1,6 +1,7 @@
 {
     "name": "speedwork/core",
     "type": "library",
+    "version" : "v0.0.1-dev",
     "description": "Speedwork Core Modules",
     "license": "MIT",
     "authors": [
