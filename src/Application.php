@@ -53,10 +53,10 @@ class Application extends Controller
         $option = strtolower($option);
 
         if ($type == 'module') {
-            return (!empty($option) && strpos($option, 'mod_') === false) ? 'mod_'.$option : $option;
+            return str_replace('mod_', '', $option);
         }
 
-        return (!empty($option) && strpos($option, 'com_') === false && strpos($option, 'mod_') === false) ? 'com_'.$option : $option;
+        return str_replace('com_', '', $option);
     }
 
     public function url($option, $type = 'component')
