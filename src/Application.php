@@ -3,7 +3,7 @@
 /**
  * This file is part of the Speedwork package.
  *
- * (c) 2s Technologies <info@2stech.com>
+ * (c) 2s Technologies <info@2stechno.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -16,7 +16,7 @@ use Speedwork\Util\Utility;
 /**
  * @author sankar <sankar.suda@gmail.com>
  */
-class Application extends Controller
+class Application extends Di
 {
     /**
      * used to inject modules dynamically.
@@ -48,7 +48,7 @@ class Application extends Controller
         }
     }
 
-    public function sanitize($option, $type = 'component')
+    protected function sanitize($option, $type = 'component')
     {
         $option = strtolower($option);
 
@@ -59,14 +59,21 @@ class Application extends Controller
         return str_replace('com_', '', $option);
     }
 
-    public function url($option, $type = 'component')
+    protected function setPath($path)
+    {
+        if ($this->template) {
+            $this->template->setPath($path);
+        }
+    }
+
+    protected function url($option, $type = 'component')
     {
         $url = $this->getPath($option, $type);
 
         return $url['url'];
     }
 
-    public function getPath($option, $type = 'component')
+    protected function getPath($option, $type = 'component')
     {
         $option = str_replace(['com_', 'mod_'], '', strtolower($option));
         $path   = _APP;
@@ -101,7 +108,7 @@ class Application extends Controller
         $url  = $url['url'];
 
         if (empty($instances[$signature])) {
-            $component_name = ucfirst(str_replace('com_', '', $component));
+            $component_name = ucfirst($component);
             $class_name     = $component_name.'Controller';
 
             //include Controller
@@ -131,7 +138,7 @@ class Application extends Controller
         $method = ($view) ? $view : 'index';
         $method = strtolower($method);
 
-        $this->template->setPath($url.'components/'.$component.'/assets/');
+        $this->setPath($url.'components/'.$component.'/assets/');
 
         $beforeRender = 'beforeRender';
 
@@ -161,42 +168,37 @@ class Application extends Controller
         return $response;
     }
 
-    public function loadModel($component, $model = '')
+    public function loadModel($option)
     {
         static $instances;
         if (!isset($instances)) {
             $instances = [];
         }
 
-        $component = $this->sanitize($component);
+        $option = $this->sanitize($option);
 
-        $signature = 'Mod'.$component.$model;
+        $signature = 'Model'.$option;
 
-        $url  = $this->getPath($component);
+        $url  = $this->getPath($option);
         $path = $url['path'];
 
         if (empty($instances[$signature])) {
-            $component_name = ucfirst(str_replace('com_', '', $component));
-            $class_name     = $component_name.'Model';
+            $name       = ucfirst($option);
+            $class_name = $name.'Model';
 
-            $model_file = $path.'components'.DS.$component.DS.$class_name.'.php';
+            $model_file = $path.'components'.DS.$option.DS.$class_name.'.php';
 
             if (!file_exists($model_file)) {
-                throw new \Exception('Model '.$component.' not found', 1);
+                throw new \Exception('Model '.$option.' not found');
             }
 
-            $class_name = 'Components\\'.$component_name.'\\'.$class_name;
+            $class_name = 'Components\\'.$name.'\\'.$class_name;
 
             if (!class_exists($class_name)) {
                 include $model_file;
             }
 
-            $component = str_replace('com_', '', $component);
-
-            $this->$component = new $class_name();
-
-            $instances[$signature] = $this->$component;
-            Registry::set($component, $this->$component);
+            $instances[$signature] = new $class_name();
         }
 
         $beforeRender = 'beforeRender';
@@ -251,7 +253,7 @@ class Application extends Controller
         $path = $url['path'];
 
         if (empty($instances[$signature])) {
-            $component_name = ucfirst(str_replace('com_', '', $component));
+            $component_name = ucfirst($component);
             $class_name     = $component_name.'Api';
 
             $model_file = $path.'components'.DS.$component.DS.$class_name.'.php';
@@ -265,8 +267,6 @@ class Application extends Controller
             if (!class_exists($class_name)) {
                 include $model_file;
             }
-
-            $component = str_replace('com_', '', $component);
 
             try {
                 $component = new $class_name();
@@ -290,9 +290,9 @@ class Application extends Controller
         return $this->loadController($component, '', $options, 2);
     }
 
-    public function requestModel($component, $model = '')
+    public function requestModel($component)
     {
-        return $this->loadModel($component, $model);
+        return $this->loadModel($component);
     }
 
     public function requestLayout($component, $view = '', $type = 'component')
@@ -311,7 +311,7 @@ class Application extends Controller
 
         $url     = $this->getPath('errors');
         $path    = $url['path'];
-        $views[] = $path.'components'.DS.'com_errors'.DS.'views'.DS.'error.tpl';
+        $views[] = $path.'components'.DS.'errors'.DS.'views'.DS.'error.tpl';
 
         foreach ($views as $file) {
             if (file_exists($file)) {
@@ -372,7 +372,7 @@ class Application extends Controller
             $instances[$signature]['object'] = new $class_name();
         }
 
-        $this->template->setPath($instances[$signature]['path'].'modules/'.$module.'/assets/');
+        $this->setPath($instances[$signature]['path'].'modules/'.$module.'/assets/');
 
         $action = &$instances[$signature]['object'];
 
@@ -416,10 +416,6 @@ class Application extends Controller
             return;
         }
 
-        if ($options['title'] == true) {
-            echo '<div class="ui-module-menu ac-ajax-module '.$module.' '.$view.'">';
-        }
-
         //load index method if module is custom
         if ($module == 'mod_custom') {
             if ($iscustom === true) {
@@ -449,10 +445,6 @@ class Application extends Controller
         }
 
         echo $this->loadView($module, $view, 'module');
-
-        if ($options['title'] == true) {
-            echo '</div>';
-        }
     }
 
     /**
@@ -469,7 +461,6 @@ class Application extends Controller
         }
 
         $position = explode(',', $position);
-        $position = @implode("','", $position);
 
         return $this->modules($position, true);
     }
@@ -614,7 +605,7 @@ class Application extends Controller
 
             $paths[] = [
                 'file'  => $dir.'components'.DS.$component.DS.'helpers'.DS.(($group) ? $group.DS : '').$helperClass.'.php',
-                'class' => 'Components\\'.ucfirst(str_replace('com_', '', $component)).'\\Helpers\\'.$helperClass,
+                'class' => 'Components\\'.ucfirst($component).'\\Helpers\\'.$helperClass,
                 ];
         } else {
             $paths[] = [
@@ -683,13 +674,13 @@ class Application extends Controller
 
                 $paths[] = [
                     'file'  => $dir.'components'.DS.$component.DS.'widgets'.DS.$widget.DS.$widgetClass.'.php',
-                    'class' => 'Components\\'.ucfirst(str_replace('com_', '', $component)).'\\Widgets\\'.$widgetClass,
+                    'class' => 'Components\\'.ucfirst($component).'\\Widgets\\'.$widgetClass,
                     'url'   => $url.'components/'.$component.'/widgets/'.$widget.'/assets/',
                 ];
 
                 $paths[] = [
                     'file'  => $dir.'components'.DS.$component.DS.'widgets'.DS.$widgetClass.'.php',
-                    'class' => 'Components\\'.ucfirst(str_replace('com_', '', $component)).'\\Widgets\\'.$widgetClass,
+                    'class' => 'Components\\'.ucfirst($component).'\\Widgets\\'.$widgetClass,
                     'url'   => $url.'components/'.$component.'/widgets/assets/',
                 ];
             } else {
@@ -733,7 +724,7 @@ class Application extends Controller
         }
 
         $instance = $instances[$signature]['object'];
-        $this->template->setPath($instances[$signature]['url']);
+        $this->setPath($instances[$signature]['url']);
 
         $beforeRun = 'beforeRun';
         $afterRun  = 'afterRun';

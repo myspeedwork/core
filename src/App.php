@@ -3,12 +3,11 @@
 /**
  * This file is part of the Speedwork package.
  *
- * (c) 2s Technologies <info@2stech.com>
+ * (c) 2s Technologies <info@2stechno.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-
 namespace Speedwork\Core;
 
 /**
@@ -114,9 +113,9 @@ class App
         $path = explode('.', $path);
 
         if ($system) {
-            $fullpath    = _SYS_DIR.implode(DS, $path).'.php';
+            $fullpath = _SYS_DIR.implode(DS, $path).'.php';
         } else {
-            $fullpath    = APP.implode(DS, $path).'.php';
+            $fullpath = APP.implode(DS, $path).'.php';
         }
 
         include_once $fullpath;
