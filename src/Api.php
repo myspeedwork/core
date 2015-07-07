@@ -28,4 +28,9 @@ class Api extends Di
      * @var array
      */
     public $data = [];
+
+    public function setData($data)
+    {
+        $this->data = $data;
+    }
 }

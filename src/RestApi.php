@@ -17,12 +17,39 @@ use Speedwork\Util\Xml;
 class RestApi extends Api
 {
     private $cache    = false;
-    private $public   = [];
     private $useronly = false;
+    private $public   = [];
+    private $request  = [];
 
     public function setCache($cache = false)
     {
         $this->cache = $cache;
+
+        return $this;
+    }
+
+    public function setRequest($request)
+    {
+        if (empty($request['api_key'])) {
+            $request['api_key'] = $this->server['api_key'];
+        }
+
+        if (empty($request['format'])) {
+            $request['format'] = $request['output'];
+        }
+
+        $request['format'] = strtolower($request['format']);
+
+        // Method is combination of option and view separated by . (dot)
+        $method = explode('.', strtolower($request['method']));
+
+        //format speedwork specification for component/view
+        $request['option'] = $method[0];
+        $request['view']   = $method[1];
+
+        $this->request = $request;
+
+        return $this;
     }
 
     public function setPublicMethods($public = [])
@@ -58,52 +85,21 @@ class RestApi extends Api
      *
      * @return none
      **/
-    public function processMethod(&$request, $authenicate = true)
+    public function processMethod($authenicate = true)
     {
-        $public = [];
-        if (is_array($this->public)) {
-            $public = array_merge($this->public, [
-                'members.register',
-                'members.login',
-                'members.signin',
-                'members.activate',
-                'members.resetpass',
-                'members.activate',
-                'members.pwreset',
-            ]);
-        }
-
         $data   = [];
         $status = [];
         $sig    = true;
 
-        // Method is combination of option and view separated by . (dot)
-        $method = explode('.', strtolower($request['method']));
-        $option = $method[0];
-
         //if method found
-        if ($option) {
-            if (empty($request['api_key'])) {
-                $request['api_key'] = $this->server['api_key'];
-            }
-
-            if (empty($request['format'])) {
-                $request['format'] = $request['output'];
-            }
-
-            $request['format'] = strtolower($request['format']);
-
-            //format speedwork specification for component/view
-            $request['option'] = $option;
-            $request['view']   = $method[1];
-
+        if ($this->request['option']) {
             //validate Request
-            if ($authenicate && !in_array($request['method'], $public)) {
-                $sig = $this->authenticate($request, false);
+            if ($authenicate) {
+                $sig = $this->authenticate(false);
             }
 
             if ($sig === true) {
-                return $this->process($request);
+                return $this->process();
             } else {
                 $status = $sig;
             }
@@ -111,10 +107,10 @@ class RestApi extends Api
             $status['A401B'] = 'Method Not Found';
         }
 
-        return $this->outputFormat($status, $data, $request);
+        return $this->outputFormat($status, $data);
     }
 
-    private function outputFormat($status = [], &$output = [], &$request = [])
+    private function outputFormat($status = [], &$output = [])
     {
         // there is no status messages other than 200
         if (!empty($status)) {
@@ -127,18 +123,14 @@ class RestApi extends Api
             $output['status'] = 'OK';
         }
 
-        //get response format type and format the response
-        $outputType = $request['format'];
-        $option     = $request['option'];
+        unset($status);
 
-        unset($status, $request);
-
-        return $this->output($outputType, $output, $option);
+        return $this->output($output);
     }
 
-    protected function process(&$request = [])
+    protected function process()
     {
-        $app_api = ($request['app']) ? true : false;
+        $app_api = ($this->request['app']) ? true : false;
 
         if ($app_api) {
             return $this->processApp($request);
@@ -147,36 +139,36 @@ class RestApi extends Api
         return $this->processApi($request);
     }
 
-    public function processApi(&$request = [])
+    public function processApi()
     {
-        $option = $request['option'];
-        $view   = $request['view'];
+        $option = $this->request['option'];
+        $view   = $this->request['view'];
 
         $data   = [];
         $status = [];
 
         $controller = $this->application->requestApi($option);
         if (is_array($controller)) {
-            return $this->outputFormat($controller, $data, $request);
+            return $this->outputFormat($controller, $data);
         }
-
-        $controller->data = $request;
 
         $method = ($view) ? $view : 'index';
 
         if (method_exists($controller, $method)) {
+            $controller->setData($this->request);
+
             $data = $controller->$method();
         } else {
             $status['A401A'] = 'Method Not Implemented';
         }
 
-        return $this->outputFormat($status, $data, $request);
+        return $this->outputFormat($status, $data);
     }
 
-    protected function processApp(&$request = [])
+    protected function processApp()
     {
-        $option = $request['option'];
-        $view   = $request['view'];
+        $option = $this->request['option'];
+        $view   = $this->request['view'];
 
         $status = [];
         $data   = [];
@@ -186,27 +178,27 @@ class RestApi extends Api
         } catch (\Exception $e) {
             $status['A400'] = 'Api Not Implemented';
 
-            return $this->outputFormat($status, $data, $request);
+            return $this->outputFormat($status, $data);
         }
-
-        $controller->data = $request;
 
         $method = ($view) ? $view : 'index';
 
         if (!method_exists($controller, $method)) {
             $status['A401A'] = 'Method Not Implemented';
 
-            return $this->outputFormat($status, $data, $request);
+            return $this->outputFormat($status, $data);
         }
+
+        $controller->setData($this->request);
 
         $response = $controller->$method();
         $api      = $response['api'];
         unset($response['api']);
 
         if ($api === false) {
-            $status['A401A'] = 'Method Not Allowed from Api';
+            $status['A401A'] = 'Method Not Allowed';
 
-            return $this->outputFormat($status, $data, $request);
+            return $this->outputFormat($status, $data);
         }
 
         $return            = [];
@@ -242,10 +234,9 @@ class RestApi extends Api
             }
         }
 
-        $tag = ($view) ? $view : $option;
         unset($response, $pagination, $data);
 
-        return $this->output($request['format'], $return, $tag);
+        return $this->output($return);
     }
 
     /**
@@ -259,9 +250,14 @@ class RestApi extends Api
      *
      * @return mixed
      */
-    public function output($outputType, &$output, $name, $root = 'api')
+    public function output(&$output)
     {
-        switch (strtolower($outputType)) {
+        $outputType = $this->request['format'];
+        $name       = ($this->request['view']) ? $this->request['view'] : $this->request['option'];
+
+        $this->setRequest([]);
+
+        switch ($outputType) {
             case 'none':
                 return;
             break;
@@ -271,14 +267,12 @@ class RestApi extends Api
             break;
 
             case 'xml':
-                $output = Xml::fromArray($output, $root, $name);
+                $output = Xml::fromArray($output, 'api', $name);
                 RestUtils::sendResponse($output, 'application/xml');
                 break;
-
             case 'php':
                 RestUtils::sendResponse(serialize($output));
                 break;
-
             case 'jsonp':
                 if ($request['callback']) {
                     $output = json_encode($output);
@@ -289,7 +283,6 @@ class RestApi extends Api
                     RestUtils::sendResponse(json_encode($output), 'application/json', $name);
                 }
                 break;
-
             case 'json':
             default:
                 RestUtils::sendResponse(json_encode($output), 'application/json', $name);
@@ -306,9 +299,26 @@ class RestApi extends Api
      *
      * @return [type] [description]
      */
-    protected function authenticate(&$request, $sig = true)
+    protected function authenticate($sig = true)
     {
-        $api_key = $request['api_key'];
+        $public = [];
+        if (is_array($this->public)) {
+            $public = array_merge($this->public, [
+                'members.register',
+                'members.login',
+                'members.signin',
+                'members.activate',
+                'members.resetpass',
+                'members.activate',
+                'members.pwreset',
+            ]);
+        }
+
+        if (in_array($this->request['method'], $public)) {
+            return true;
+        }
+
+        $api_key = $this->request['api_key'];
         if (!$api_key) {
             return ['A402' => 'Api Key not found'];
         }
@@ -316,18 +326,18 @@ class RestApi extends Api
         if ($this->cache) {
             $cache_key = 'api_cache_'.$api_key;
 
-            $status = Cache::remember($cache_key, function () use ($request, $sig) {
-                return $this->validate($request, $sig);
+            $status = Cache::remember($cache_key, function () use ($sig) {
+                return $this->validate($sig);
             }, 'api');
         } else {
-            $status = $this->validate($request, $sig);
+            $status = $this->validate($sig);
         }
 
         if ($status['status'] == 'OK') {
             if ($sig) {
-                $signature = $this->generateSignature($request, $status['api_secret']);
+                $signature = $this->generateSignature($status['api_secret']);
 
-                if (strcmp($request['api_sig'], $signature) != 0) {
+                if (strcmp($this->request['api_sig'], $signature) != 0) {
                     return ['A408' => 'Api Signature not equal'];
                 }
             }
@@ -355,7 +365,7 @@ class RestApi extends Api
     }
 
     /**
-     * Functions to authenticate.
+     * Functions to validate request.
      *
      * @param array &$request Element array
      * @param bool  $sig      Flag to specify force authentication
@@ -363,15 +373,15 @@ class RestApi extends Api
      *
      * @return Boolean response
      **/
-    protected function validate(&$request, $sig = true)
+    protected function validate($sig = true)
     {
-        $api_key = $request['api_key'];
+        $api_key = $this->request['api_key'];
         if (!$api_key) {
             return ['A402' => 'Api Key not found'];
         }
 
         if ($sig) {
-            $api_sig = $request['api_sig'];
+            $api_sig = $this->request['api_sig'];
 
             if (!$api_sig) {
                 return ['A403' => 'Api Signature not found'];
@@ -416,7 +426,10 @@ class RestApi extends Api
             }
         }
 
-        return ['status' => 'OK', 'data' => $secret];
+        return [
+            'status' => 'OK',
+            'data'   => $secret,
+        ];
     }
 
     /**
@@ -450,15 +463,10 @@ class RestApi extends Api
                 return false;
             }
         } else {
-            $row = $this->database->find(
-                '#__api_users', 'first', [
-                    'conditions' => [
-                        'status'  => 1,
-                        'api_key' => $api_key,
-                    ],
-                    'ignore' => true,
-                ]
-            );
+            $row = $this->database->find('#__api_users', 'first', [
+                'conditions' => ['status' => 1, 'api_key' => $api_key],
+                'ignore'     => true,
+            ]);
 
             if ($row['status'] != 1) {
                 return false;
@@ -485,13 +493,13 @@ class RestApi extends Api
      *
      * @return array data
      **/
-    protected function generateSignature(&$params, $secret)
+    protected function generateSignature($secret)
     {
         $str = '';
 
-        @ksort($params);
+        @ksort($this->params);
         // Note: make sure that the signature parameter is not already included in $params
-        foreach ($params as $k => $v) {
+        foreach ($this->params as $k => $v) {
             $str .= $k.$v;
         }
         $str = $secret.$str;

@@ -12,6 +12,7 @@
     ],
     "require": {
         "php" : ">=5.4",
+        "pimple/pimple" : "v3.0.0",
         "speedwork/util" : "dev-master"
     },
     "autoload" : {

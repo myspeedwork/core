@@ -118,8 +118,6 @@ class Application extends Di
                 throw new \Exception('Controller name '.$component.' not found', 1);
             }
 
-            $this->loadModel($component);
-
             $class_name = 'Components\\'.$component_name.'\\'.$class_name;
             //check whether this is already loaded
             if (!class_exists($class_name)) {
@@ -127,6 +125,8 @@ class Application extends Di
             }
 
             $instances[$signature] = new $class_name();
+
+            $instances[$signature]->$component = $this->loadModel($component);
         }
 
         if ($instance === 2) {

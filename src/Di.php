@@ -19,6 +19,7 @@ class Di
     protected $get    = [];
     protected $data   = [];
     protected $server = [];
+    protected $cookie = [];
     protected $di;
 
     public function __construct()
@@ -27,6 +28,7 @@ class Di
         $this->get    = &$_GET;
         $this->data   = &$_REQUEST;
         $this->server = &$_SERVER;
+        $this->cookie = &$_COOKIE;
     }
 
     public function setContainer($di)
@@ -100,5 +102,50 @@ class Di
     public function release($key)
     {
         return $this->get('tengine')->getTemplateVars($key);
+    }
+
+    /**
+     * Redirect the url.
+     *
+     * @param [type] $url  [description]
+     * @param int    $time [description]
+     * @param bool   $html [description]
+     *
+     * @return [type] [description]
+     */
+    public function redirect($url, $rewrite = true, $time = 0)
+    {
+        if ($rewrite) {
+            $url = $this->link($url);
+        }
+
+        $is_ajax_request = Registry::get('is_ajax_request');
+        if ($is_ajax_request) {
+            $status = $this->release('status');
+
+            $status['redirect'] = $url;
+            $this->assign('status', $status);
+            $this->assign('redirect', $url);
+            Registry::set('redirect', $url);
+
+            return true;
+        }
+
+        if (headers_sent()) {
+            echo  '<meta http-equiv="refresh" content="'.$time.'; url='.$url.'"/>';
+
+            return true;
+        }
+
+        if ($time) {
+            header('refresh:'.$time.';url='.str_replace('&amp;', '&', $url));
+        } else {
+            header('location:'.str_replace('&amp;', '&', $url));
+        }
+    }
+
+    public function link($url)
+    {
+        return Router::link($url);
     }
 }
