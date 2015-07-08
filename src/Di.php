@@ -10,6 +10,8 @@
  */
 namespace Speedwork\Core;
 
+use Speedwork\Util\Router;
+
 /**
  * @author sankar <sankar.suda@gmail>
  */
