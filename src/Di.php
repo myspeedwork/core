@@ -104,6 +104,11 @@ class Di
         return $this->get('tengine')->getTemplateVars($key);
     }
 
+    public function setData($data)
+    {
+        $this->data = $data;
+    }
+
     /**
      * Redirect the url.
      *

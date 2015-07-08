@@ -21,16 +21,4 @@ class Api extends Di
      * @var array
      */
     public $status = [];
-
-    /**
-     * holds the $_POST,$_GET AND $_REQUEST data values.
-     *
-     * @var array
-     */
-    public $data = [];
-
-    public function setData($data)
-    {
-        $this->data = $data;
-    }
 }
