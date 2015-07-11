@@ -52,7 +52,7 @@ class Acl extends Di
 
     private function lookupCookies()
     {
-        if (empty($_COOKIE[COOKIE_NAME]) || empty($_COOKIE[COOKIE_KEY])) {
+        if (empty($this->cookie[COOKIE_NAME]) || empty($this->cookie[COOKIE_KEY])) {
             return false;
         }
 
@@ -78,16 +78,16 @@ class Acl extends Di
     public function isUserLoggedIn()
     {
         if ($this->lookupCookies()) {
-            if (!$this->checkIsUserLoggedIn($_COOKIE[COOKIE_NAME], $_COOKIE[COOKIE_KEY])) {
+            if (!$this->checkIsUserLoggedIn($this->cookie[COOKIE_NAME], $this->cookie[COOKIE_KEY])) {
                 $this->logout();
 
                 return false;
             } else {
                 if (!$this->lookupSessions()) {
-                    $this->session->set(COOKIE_NAME, $_COOKIE[COOKIE_NAME]);
-                    $this->session->set(COOKIE_KEY, $_COOKIE[COOKIE_KEY]);
-                } elseif (strcmp($_COOKIE[COOKIE_NAME], $this->session->get(COOKIE_NAME))
-                    || strcmp($_COOKIE[COOKIE_KEY], $this->session->get(COOKIE_KEY))) {
+                    $this->session->set(COOKIE_NAME, $this->cookie[COOKIE_NAME]);
+                    $this->session->set(COOKIE_KEY, $this->cookie[COOKIE_KEY]);
+                } elseif (strcmp($this->cookie[COOKIE_NAME], $this->session->get(COOKIE_NAME))
+                    || strcmp($this->cookie[COOKIE_KEY], $this->session->get(COOKIE_KEY))) {
                     $this->logout();
 
                     return false;

@@ -22,10 +22,11 @@ class Di
     protected $data   = [];
     protected $server = [];
     protected $cookie = [];
-    protected $di;
+    protected $di     = [];
 
-    public function __construct()
+    public function __construct(Container $di = null)
     {
+        $this->di = $di;
         $this->post   = &$_POST;
         $this->get    = &$_GET;
         $this->data   = &$_REQUEST;
@@ -33,7 +34,7 @@ class Di
         $this->cookie = &$_COOKIE;
     }
 
-    public function setContainer($di)
+    public function setContainer(Container $di)
     {
         $this->di = $di;
     }
@@ -47,18 +48,7 @@ class Di
      */
     public function __get($key)
     {
-        return Registry::get($key);
-    }
-
-    /**
-     * store the values in registry.
-     *
-     * @param string $key   key to store
-     * @param mixed  $value valye to store
-     */
-    public function __set($key, $value)
-    {
-        Registry::set($key, $value);
+        return $this->get($key);
     }
 
     /**
@@ -70,6 +60,10 @@ class Di
      */
     public function get($key)
     {
+        if ($this->di->has($key)) {
+            return $this->di->get($key);
+        }
+
         return Registry::get($key);
     }
 
@@ -81,7 +75,8 @@ class Di
      */
     public function set($key, $value)
     {
-        Registry::set($key, $value);
+        $this->di->set($key, $value);
+        return $this;
     }
 
     /**
@@ -92,18 +87,20 @@ class Di
      */
     public function sets($key, $value)
     {
-        Registry::set($key, $value);
+        $this->set($key, $value);
         $this->assign($key, $value);
+        return $this;
     }
 
     public function assign($key, $value)
     {
-        $this->get('tengine')->assignByRef($key, $value);
+        $this->get('engine')->assignByRef($key, $value);
+        return $this;
     }
 
     public function release($key)
     {
-        return $this->get('tengine')->getTemplateVars($key);
+        return $this->get('engine')->getTemplateVars($key);
     }
 
     public function setData($data)

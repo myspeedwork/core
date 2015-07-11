@@ -125,6 +125,7 @@ class Application extends Di
             }
 
             $instances[$signature] = new $class_name();
+            $instances[$signature]->setContainer($this->di);
 
             $instances[$signature]->$component = $this->loadModel($component);
         }
@@ -199,6 +200,7 @@ class Application extends Di
             }
 
             $instances[$signature] = new $class_name();
+            $instances[$signature]->setContainer($this->di);
         }
 
         $beforeRender = 'beforeRender';
@@ -235,7 +237,7 @@ class Application extends Di
             return;
         }
 
-        return Registry::get('tengine')->fetch($view_file);
+        return $this->get('engine')->fetch($view_file);
     }
 
     public function requestApi($component)
@@ -275,6 +277,7 @@ class Application extends Di
             }
 
             $instances[$signature] = $component;
+            $instances[$signature]->setContainer($this->di);
         }
 
         $beforeRender = 'beforeRender';
@@ -370,6 +373,7 @@ class Application extends Di
             require_once $file;
 
             $instances[$signature]['object'] = new $class_name();
+            $instances[$signature]['object']->setContainer($this->di);
         }
 
         $this->setPath($instances[$signature]['path'].'modules/'.$module.'/assets/');
@@ -495,16 +499,15 @@ class Application extends Di
             ];
 
         if (!empty($option)) {
-            if (empty($view)) {
-                $conditions[] = ['c.com_view' => ''];
-            } else {
-                $conditions[] = ['c.com_view' => $view];
-            }
+            $conditions[] = ['c.com_view' => $view];
             $joins[] = [
                 'table'      => '#__core_components',
                 'alias'      => 'c',
                 'type'       => 'INNER',
-                'conditions' => ['c.component_id = tm.component_id','c.component' => Registry::get('option')],
+                'conditions' => [
+                    'c.component_id = tm.component_id',
+                    'c.component' => $option
+                ],
             ];
         }
         $conditions[] = ['tm.status' => 1];
@@ -626,7 +629,7 @@ class Application extends Di
                 require_once $path['file'];
 
                 $beforeRun = 'beforeRun';
-                $instance  = new $helperClass();
+                $instance  = new $helperClass($this->di);
 
                 if (method_exists($instance, $beforeRun)) {
                     $instance->$beforeRun();
@@ -715,8 +718,8 @@ class Application extends Di
 
                     require_once $path['file'];
 
-                    $instances[$signature]['object'] = new $widgetClass();
-                    $instances[$signature]['url']    = $path['url'];
+                    $instances[$signature]['object'] = new $widgetClass($this->di);
+                    $instances[$signature]['url'] = $path['url'];
 
                     break;
                 }
@@ -770,7 +773,7 @@ class Application extends Di
             require_once $file;
         }
 
-        $controller = new $component();
+        $controller = new $component($this->di);
 
         $beforeRender = 'beforeRender';
 

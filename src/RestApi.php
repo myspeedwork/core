@@ -453,10 +453,10 @@ class RestApi extends Api
             $token   = $api_key[0];
 
             if ($api_key[1] === 'x') {
-                $user = $this->userinfo->getUserBy('token', $token);
+                $user = $this->acl->getUserBy('token', $token);
             } else {
                 $password = ($this->useronly) ? null : $api_key[1];
-                $user     = $this->userinfo->isValidUser($token, $password);
+                $user     = $this->acl->isValidUser($token, $password);
             }
 
             if ($user === false) {
@@ -472,7 +472,7 @@ class RestApi extends Api
                 return false;
             }
 
-            $user = $this->userinfo->getUserBy('userid', $row['fkuserid']);
+            $user = $this->acl->getUserBy('userid', $row['fkuserid']);
         }
 
         if ($user['status'] != 1) {

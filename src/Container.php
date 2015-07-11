@@ -74,4 +74,43 @@ class Container extends BaseContainer
 
         return Registry::get($key);
     }
+
+
+
+    /**
+     * Gets a parameter or an object.
+     *
+     * @param string $id The unique identifier for the parameter or object
+     *
+     * @return mixed The value of the parameter or an object
+     *
+     * @throws \InvalidArgumentException if the identifier is not defined
+     */
+    public function offsetGet($id)
+    {
+        if (!isset($this->keys[$id])) {
+            return;
+        }
+
+        return parent::offsetGet($id);
+    }
+
+    /**
+     * Registers a service provider.
+     *
+     * @param ServiceProviderInterface $provider A ServiceProviderInterface instance
+     * @param array                    $values   An array of values that customizes the provider
+     *
+     * @return static
+     */
+    public function register(ServiceProvider $provider, array $values = [])
+    {
+        $provider->register($this);
+
+        foreach ($values as $key => $value) {
+            $this[$key] = $value;
+        }
+
+        return $this;
+    }
 }
