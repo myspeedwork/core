@@ -8,6 +8,7 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
+
 namespace Speedwork\Core;
 
 use Exception;
@@ -66,7 +67,7 @@ class Application extends Di
         }
     }
 
-    protected function url($option, $type = 'component')
+    public function url($option, $type = 'component')
     {
         $url = $this->getPath($option, $type);
 
@@ -89,9 +90,9 @@ class Application extends Di
         ];
     }
 
-    public function loadController($component, $view = '', $options = [], $instance = false)
+    public function loadController($option, $view = '', $options = [], $instance = false)
     {
-        if (!$component) {
+        if (empty($option)) {
             return false;
         }
 
@@ -100,34 +101,32 @@ class Application extends Di
             $instances = [];
         }
 
-        $component = $this->sanitize($component);
-        $signature = 'Com'.$component;
+        $option    = $this->sanitize($option);
+        $signature = 'Controller'.$option;
 
-        $url  = $this->getPath($component);
+        $url  = $this->getPath($option);
         $path = $url['path'];
         $url  = $url['url'];
 
         if (empty($instances[$signature])) {
-            $component_name = ucfirst($component);
-            $class_name     = $component_name.'Controller';
+            $name       = ucfirst($option);
+            $class_name = 'Controller';
 
             //include Controller
-            $file = $path.'components'.DS.$component.DS.$class_name.'.php';
+            $file = $path.'components'.DS.$option.DS.$class_name.'.php';
 
             if (!file_exists($file)) {
-                throw new \Exception('Controller name '.$component.' not found', 1);
+                throw new \Exception('Controller name '.$option.' not found', 1);
             }
 
-            $class_name = 'Components\\'.$component_name.'\\'.$class_name;
-            //check whether this is already loaded
-            if (!class_exists($class_name)) {
-                require_once $file;
-            }
+            $class = 'Components\\'.$name.'\\'.$class_name;
 
-            $instances[$signature] = new $class_name();
+            require_once $file;
+
+            $instances[$signature] = new $class();
             $instances[$signature]->setContainer($this->di);
 
-            $instances[$signature]->$component = $this->loadModel($component);
+            $instances[$signature]->{'model'} = $this->loadModel($option);
         }
 
         if ($instance === 2) {
@@ -139,7 +138,7 @@ class Application extends Di
         $method = ($view) ? $view : 'index';
         $method = strtolower($method);
 
-        $this->setPath($url.'components/'.$component.'/assets/');
+        $this->setPath($url.'components/'.$option.'/assets/');
 
         $beforeRender = 'beforeRender';
 
@@ -180,26 +179,24 @@ class Application extends Di
 
         $signature = 'Model'.$option;
 
-        $url  = $this->getPath($option);
-        $path = $url['path'];
-
         if (empty($instances[$signature])) {
+            $url  = $this->getPath($option);
+            $path = $url['path'];
+
             $name       = ucfirst($option);
-            $class_name = $name.'Model';
+            $class_name = 'Model';
 
-            $model_file = $path.'components'.DS.$option.DS.$class_name.'.php';
+            $file = $path.'components'.DS.$option.DS.$class_name.'.php';
 
-            if (!file_exists($model_file)) {
+            if (!file_exists($file)) {
                 throw new \Exception('Model '.$option.' not found');
             }
 
-            $class_name = 'Components\\'.$name.'\\'.$class_name;
+            $class = 'Components\\'.$name.'\\'.$class_name;
 
-            if (!class_exists($class_name)) {
-                include $model_file;
-            }
+            require_once $file;
 
-            $instances[$signature] = new $class_name();
+            $instances[$signature] = new $class();
             $instances[$signature]->setContainer($this->di);
         }
 
@@ -211,33 +208,49 @@ class Application extends Di
         return $instances[$signature];
     }
 
-    public function loadView($component, $view = '', $type = 'component')
+    protected function findView($option, $view = '', $type = 'component')
     {
-        $type      = (empty($type)) ? 'component' : $type;
-        $component = $this->sanitize($component, $type);
-        $folder    = ($type == 'component') ? 'components' : 'modules';
+        $type   = (empty($type)) ? 'component' : $type;
+        $option = $this->sanitize($option, $type);
+        $folder = ($type == 'component') ? 'components' : 'modules';
 
-        $url  = $this->getPath($component, $type);
+        $url  = $this->getPath($option, $type);
         $path = $url['path'];
 
-        $view    = strtolower(trim($view));
-        $views   = [];
-        $views[] = _TMP_PATH.$folder.DS.$component.DS.(($view) ? $view : 'index').'.tpl';
-        $views[] = $path.$folder.DS.$component.DS.'views'.DS.(($view) ? $view : 'index').'.tpl';
+        $view = explode('.', strtolower(trim($view)));
 
-        $view_file = '';
+        $views   = [];
+        $views[] = _TMP_PATH.$folder.DS.$option.DS.((!empty($view[0])) ? implode(DS, $view) : 'index').'.tpl';
+        $views[] = $path.$folder.DS.$option.DS.'views'.DS.((!empty($view[0])) ? implode(DS, $view) : 'index').'.tpl';
+
         foreach ($views as $file) {
             if (file_exists($file)) {
-                $view_file = $file;
+                return $file;
                 break;
             }
         }
 
+        return;
+    }
+
+    public function loadView($component, $view = '', $type = 'component')
+    {
+        $view_file = $this->findView($component, $view, $type);
         if (empty($view_file)) {
             return;
         }
 
         return $this->get('engine')->fetch($view_file);
+    }
+
+    public function requestLayout($component, $view = '', $type = 'component')
+    {
+        $view_file = $this->findView($component, $view, $type);
+        if (empty($view_file)) {
+            return $this->findView('errors');
+        }
+
+        return $view_file;
     }
 
     public function requestApi($component)
@@ -255,8 +268,8 @@ class Application extends Di
         $path = $url['path'];
 
         if (empty($instances[$signature])) {
-            $component_name = ucfirst($component);
-            $class_name     = $component_name.'Api';
+            $name       = ucfirst($component);
+            $class_name = 'Api';
 
             $model_file = $path.'components'.DS.$component.DS.$class_name.'.php';
 
@@ -264,14 +277,14 @@ class Application extends Di
                 return ['A400' => 'Api Not Implemented'];
             }
 
-            $class_name = 'Components\\'.$component_name.'\\'.$class_name;
+            $class = 'Components\\'.$name.'\\'.$class_name;
 
             if (!class_exists($class_name)) {
                 include $model_file;
             }
 
             try {
-                $component = new $class_name();
+                $component = new $class();
             } catch (\Exception $e) {
                 return ['A400A' => 'Api Not Implemented'];
             }
@@ -296,32 +309,6 @@ class Application extends Di
     public function requestModel($component)
     {
         return $this->loadModel($component);
-    }
-
-    public function requestLayout($component, $view = '', $type = 'component')
-    {
-        $type      = (empty($type)) ? 'component' : $type;
-        $component = $this->sanitize($component, $type);
-        $type      = ($type == 'component') ? 'components' : 'modules';
-
-        $url  = $this->getPath($component);
-        $path = $url['path'];
-
-        $view    = strtolower(trim($view));
-        $views   = [];
-        $views[] = _TMP_PATH.$type.DS.$component.DS.(($view) ? $view : 'index').'.tpl';
-        $views[] = $path.$type.DS.$component.DS.'views'.DS.(($view) ? $view : 'index').'.tpl';
-
-        $url     = $this->getPath('errors');
-        $path    = $url['path'];
-        $views[] = $path.'components'.DS.'errors'.DS.'views'.DS.'error.tpl';
-
-        foreach ($views as $file) {
-            if (file_exists($file)) {
-                return $file;
-                break;
-            }
-        }
     }
 
     public function requestAction($option, $view = null, &$options = [])
@@ -356,8 +343,8 @@ class Application extends Di
             $path = $url['path'];
             $url  = $url['url'];
 
-            $module_name = ucfirst(str_replace('mod_', '', $module));
-            $class_name  = $module_name.'Module';
+            $name       = ucfirst($module);
+            $class_name = 'Module';
 
             //include Controller
             $file = $path.'modules'.DS.$module.DS.$class_name.'.php';
@@ -366,13 +353,13 @@ class Application extends Di
                 throw new Exception($module.' not found');
             }
 
-            $class_name = 'Modules\\'.$module_name.'\\'.$class_name;
+            $class = 'Modules\\'.$name.'\\'.$class_name;
 
             $instances[$signature]['path'] = $url;
 
             require_once $file;
 
-            $instances[$signature]['object'] = new $class_name();
+            $instances[$signature]['object'] = new $class();
             $instances[$signature]['object']->setContainer($this->di);
         }
 
@@ -500,13 +487,13 @@ class Application extends Di
 
         if (!empty($option)) {
             $conditions[] = ['c.com_view' => $view];
-            $joins[] = [
+            $joins[]      = [
                 'table'      => '#__core_components',
                 'alias'      => 'c',
                 'type'       => 'INNER',
                 'conditions' => [
                     'c.component_id = tm.component_id',
-                    'c.component' => $option
+                    'c.component' => $option,
                 ],
             ];
         }
@@ -657,6 +644,9 @@ class Application extends Di
             $instances = [];
         }
 
+        $name    = str_replace(' ', '', ucwords(str_replace('-', ' ', $name)));
+        $name[0] = strtolower($name[0]);
+
         $signature = 'Widget'.strtolower($name);
 
         if (!$instances[$signature]) {
@@ -719,11 +709,15 @@ class Application extends Di
                     require_once $path['file'];
 
                     $instances[$signature]['object'] = new $widgetClass($this->di);
-                    $instances[$signature]['url'] = $path['url'];
+                    $instances[$signature]['url']    = $path['url'];
 
                     break;
                 }
             }
+        }
+
+        if (empty($instances[$signature])) {
+            throw new \Exception("Widget '".$name."' not found", 1);
         }
 
         $instance = $instances[$signature]['object'];

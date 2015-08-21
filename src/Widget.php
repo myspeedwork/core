@@ -8,6 +8,7 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
+
 namespace Speedwork\Core;
 
 /**
@@ -50,7 +51,9 @@ abstract class Widget extends Di
 
     public function setOptions($options)
     {
-        $this->options = $options;
+        $this->options = array_replace_recursive($this->options, $options);
+
+        return $this;
     }
 
     protected function getOptions()
@@ -65,6 +68,14 @@ abstract class Widget extends Di
     protected function getDecodedOptions()
     {
         return $this->decode($this->getOptions());
+    }
+
+    protected function setRun($name)
+    {
+        $selector = $this->options['selector'];
+        $options  = $this->getDecodedOptions();
+        $js       = 'jQuery("'.$selector.'").livequery(function(){$(this).'.$name.'('.$options.');});';
+        $this->template->addScriptDeclaration($js);
     }
 
     private function isAssoc($arr)

@@ -65,7 +65,7 @@ class Acl extends Di
     */
     private function lookupSessions()
     {
-        if (!$this->session->has(COOKIE_NAME) || !$this->session->has(COOKIE_KEY)) {
+        if (!$this->get('session')->has(COOKIE_NAME) || !$this->get('session')->has(COOKIE_KEY)) {
             return false;
         }
 
@@ -84,10 +84,10 @@ class Acl extends Di
                 return false;
             } else {
                 if (!$this->lookupSessions()) {
-                    $this->session->set(COOKIE_NAME, $this->cookie[COOKIE_NAME]);
-                    $this->session->set(COOKIE_KEY, $this->cookie[COOKIE_KEY]);
-                } elseif (strcmp($this->cookie[COOKIE_NAME], $this->session->get(COOKIE_NAME))
-                    || strcmp($this->cookie[COOKIE_KEY], $this->session->get(COOKIE_KEY))) {
+                    $this->get('session')->set(COOKIE_NAME, $this->cookie[COOKIE_NAME]);
+                    $this->get('session')->set(COOKIE_KEY, $this->cookie[COOKIE_KEY]);
+                } elseif (strcmp($this->cookie[COOKIE_NAME], $this->get('session')->get(COOKIE_NAME))
+                    || strcmp($this->cookie[COOKIE_KEY], $this->get('session')->get(COOKIE_KEY))) {
                     $this->logout();
 
                     return false;
@@ -97,7 +97,7 @@ class Acl extends Di
             }
         }
         if ($this->lookupSessions()) {
-            if (!$this->checkIsUserLoggedIn($this->session->get(COOKIE_NAME), $this->session->get(COOKIE_KEY))) {
+            if (!$this->checkIsUserLoggedIn($this->get('session')->get(COOKIE_NAME), $this->get('session')->get(COOKIE_KEY))) {
                 return false;
             }
 
@@ -120,24 +120,24 @@ class Acl extends Di
         $conditions   = [];
         $conditions[] = $this->getMatches($username);
 
-        $data = $this->database->find('#__users', 'first', [
+        $row = $this->database->find('#__users', 'first', [
             'conditions' => $conditions,
             ]
         );
 
-        if (empty($data['userid'])) {
+        if (empty($row['userid'])) {
             return false;
         }
         // check if passwords match
-        if (strcmp($user_key, $data['password'])) {
+        if (strcmp($user_key, $row['password'])) {
             return false;
         }
 
-        $this->sets('userid', $data['userid']);
+        $this->sets('userid', $row['userid']);
         $this->sets('username', $username);
-        $this->sets('user', $data);
+        $this->sets('user', $row);
 
-        Registry::set('power', $data['power']);
+        Registry::set('power', $row['power']);
 
         return true;
     }
@@ -199,8 +199,8 @@ class Acl extends Di
             return false;
         }
 
-        $this->session->set(COOKIE_NAME, $username);
-        $this->session->set(COOKIE_KEY, $key);
+        $this->get('session')->set(COOKIE_NAME, $username);
+        $this->get('session')->set(COOKIE_KEY, $key);
 
         $this->sets('username', $username);
         $this->sets('user', $row);
@@ -304,7 +304,7 @@ class Acl extends Di
         @setcookie(COOKIE_KEY, '', time() - COOKIE_TIME, COOKIE_PATH);
         @setcookie(COOKIE_UID, '', time() - COOKIE_TIME, COOKIE_PATH);
 
-        $this->session->clear();
+        $this->get('session')->clear();
 
         return true;
     }
@@ -324,7 +324,7 @@ class Acl extends Di
 
         return true;
 
-        $new_pass       = $this->generateUniqueId();
+        $new_pass       = $this->generatePassword();
         $activation_key = $this->generateActivationKey();
 
         $new_md5 = salt($new_pass);
@@ -386,7 +386,7 @@ class Acl extends Di
             return false;
         }
 
-        $new_pass       = $this->generateUniqueId();
+        $new_pass       = $this->generatePassword();
         $activation_key = $this->generateActivationKey();
 
         $new_md5 = salt($new_pass);
@@ -551,7 +551,7 @@ class Acl extends Di
         return $row['userid'];
     }
 
-    public function generateUniqueId()
+    public function getUniqId()
     {
         return substr(uniqid(rand(), true), 0, 10);
     }
@@ -734,8 +734,17 @@ class Acl extends Di
             $default = explode('||', $default);
         }
 
+        if (!is_array($default['include'])) {
+            $default['include'] = $default;
+            $default['exclude'] = [];
+        }
+
+        if (!is_array($default['exclude'])) {
+            $default['exclude'] = [];
+        }
+
         if (count($default) > 0) {
-            $permissions = array_merge($permissions, $default);
+            $permissions = array_merge($permissions, $default['include']);
         }
 
         $_permissions                 = [];
@@ -746,16 +755,20 @@ class Acl extends Di
         $_permissions['include']      = [];
         $_permissions['group']        = [];
 
+        if (empty($userid)) {
+            $_permissions['exclude'] = $default['exclude'];
+        }
+
         if (!empty($userid)) {
             //userpermissions
             $permissions = $this->userPermissions($userid);
 
             if ($permissions && is_array($permissions)) {
                 if (is_array($permissions['exclude'])) {
-                    $_permissions['user_exclude'] = $permissions['exclude'];
+                    $_permissions['user_exclude'] = array_merge($_permissions['user_exclude'], $permissions['exclude']);
                 }
                 if (is_array($permissions['include'])) {
-                    $_permissions['user_include'] = $permissions['include'];
+                    $_permissions['user_include'] = array_merge($_permissions['user_include'], $permissions['include']);
                 }
             }
 
@@ -763,13 +776,15 @@ class Acl extends Di
             $permissions = $this->userGroupPermissions($userid);
             if ($permissions && is_array($permissions)) {
                 if (is_array($permissions['exclude'])) {
-                    $_permissions['exclude'] = $permissions['exclude'];
+                    $_permissions['exclude'] = array_merge($_permissions['exclude'], $permissions['exclude']);
                 }
                 if (is_array($permissions['include'])) {
-                    $_permissions['group'] = $permissions['include'];
+                    $_permissions['group'] = array_merge($_permissions['include'], $permissions['include']);
                 }
             }
         }
+
+        $_permissions['group'] = array_merge($_permissions['global'], $_permissions['group']);
 
         $include = Configure::read('permissions.include');
         $exclude = Configure::read('permissions.exclude');
@@ -792,8 +807,6 @@ class Acl extends Di
         if (is_array($exclude)) {
             $_permissions['user_include'] = array_merge($_permissions['user_include'], $exclude);
         }
-
-        $_permissions['group'] = array_merge($_permissions['global'], $_permissions['group']);
 
         Configure::write('permissions', $_permissions);
 
@@ -823,9 +836,9 @@ class Acl extends Di
         $_permissions = $this->permissions[$userid];
 
         $prefix   = '';
-        $is_admin = Registry::get('is_admin');
+        $firewall = Registry::get('firewall');
 
-        if ($is_admin) {
+        if ($firewall) {
             $prefix = 'admin_';
         }
 

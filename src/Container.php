@@ -75,26 +75,6 @@ class Container extends BaseContainer
         return Registry::get($key);
     }
 
-
-
-    /**
-     * Gets a parameter or an object.
-     *
-     * @param string $id The unique identifier for the parameter or object
-     *
-     * @return mixed The value of the parameter or an object
-     *
-     * @throws \InvalidArgumentException if the identifier is not defined
-     */
-    public function offsetGet($id)
-    {
-        if (!isset($this->keys[$id])) {
-            return;
-        }
-
-        return parent::offsetGet($id);
-    }
-
     /**
      * Registers a service provider.
      *

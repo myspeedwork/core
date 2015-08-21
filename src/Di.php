@@ -8,6 +8,7 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
+
 namespace Speedwork\Core;
 
 use Speedwork\Util\Router;
@@ -26,7 +27,7 @@ class Di
 
     public function __construct(Container $di = null)
     {
-        $this->di = $di;
+        $this->di     = $di;
         $this->post   = &$_POST;
         $this->get    = &$_GET;
         $this->data   = &$_REQUEST;
@@ -68,6 +69,18 @@ class Di
     }
 
     /**
+     * get the key from stored data value.
+     *
+     * @param string $key The name of the variable to access
+     *
+     * @return mixed returns your stored value
+     */
+    public function has($key)
+    {
+        return $this->di->has($key);
+    }
+
+    /**
      * store key value pair in registry.
      *
      * @param string $key   name of the variable
@@ -76,6 +89,7 @@ class Di
     public function set($key, $value)
     {
         $this->di->set($key, $value);
+
         return $this;
     }
 
@@ -89,12 +103,15 @@ class Di
     {
         $this->set($key, $value);
         $this->assign($key, $value);
+        Registry::set($key, $value);
+
         return $this;
     }
 
     public function assign($key, $value)
     {
         $this->get('engine')->assignByRef($key, $value);
+
         return $this;
     }
 
@@ -119,6 +136,9 @@ class Di
      */
     public function redirect($url, $rewrite = true, $time = 0)
     {
+        if (empty($url)) {
+            $url = 'index.php';
+        }
         if ($rewrite) {
             $url = $this->link($url);
         }
