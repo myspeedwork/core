@@ -8,6 +8,7 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
+
 namespace Speedwork\Core;
 
 use Cake\Event\Event;
@@ -137,7 +138,7 @@ class Acl extends Di
         $this->sets('username', $username);
         $this->sets('user', $row);
 
-        Registry::set('power', $row['power']);
+        $this->set('power', $row['power']);
 
         return true;
     }
@@ -192,7 +193,7 @@ class Acl extends Di
 
         $userid = $row['userid'];
         $this->sets('userid', $userid);
-        Registry::set('power', $row['power']);
+        $this->set('power', $row['power']);
 
         // Check whether can allow to view index
         if (!$this->isAllowed()) {
@@ -632,7 +633,7 @@ class Acl extends Di
     {
         if (Configure::read('use_power')) {
             if ($userid == $this->userid) {
-                $power = Registry::get('power');
+                $power = $this->get('power');
 
                 return [$power];
             }
@@ -836,7 +837,7 @@ class Acl extends Di
         $_permissions = $this->permissions[$userid];
 
         $prefix   = '';
-        $firewall = Registry::get('firewall');
+        $firewall = $this->get('firewall');
 
         if ($firewall) {
             $prefix = 'admin_';

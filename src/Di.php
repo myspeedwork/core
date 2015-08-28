@@ -11,6 +11,7 @@
 
 namespace Speedwork\Core;
 
+use Speedwork\Config\Configure;
 use Speedwork\Util\Router;
 
 /**
@@ -94,6 +95,17 @@ class Di
     }
 
     /**
+     * store key value pair in registry.
+     *
+     * @param string $key   name of the variable
+     * @param mixed  $value value to store in registry
+     */
+    public function read($key)
+    {
+        return Configure::read($key);
+    }
+
+    /**
      * sets is same as set but it set in registry and theme.
      *
      * @param string $key   name of the variable
@@ -143,14 +155,14 @@ class Di
             $url = $this->link($url);
         }
 
-        $is_ajax_request = Registry::get('is_ajax_request');
+        $is_ajax_request = $this->get('is_ajax_request');
         if ($is_ajax_request) {
             $status = $this->release('status');
 
             $status['redirect'] = $url;
             $this->assign('status', $status);
             $this->assign('redirect', $url);
-            Registry::set('redirect', $url);
+            $this->set('redirect', $url);
 
             return true;
         }
