@@ -8,6 +8,7 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
+
 namespace Speedwork\Core;
 
 use Cake\Cache\Cache;
@@ -147,7 +148,7 @@ class RestApi extends Api
         $data   = [];
         $status = [];
 
-        $controller = $this->application->requestApi($option);
+        $controller = $this->get('resolver')->requestApi($option);
         if (is_array($controller)) {
             return $this->outputFormat($controller, $data);
         }
@@ -174,7 +175,7 @@ class RestApi extends Api
         $data   = [];
 
         try {
-            $controller = $this->application->requestController($option);
+            $controller = $this->get('resolver')->requestController($option);
         } catch (\Exception $e) {
             $status['A400'] = 'Api Not Implemented';
 

@@ -18,6 +18,8 @@ abstract class Widget extends Di
 {
     protected $options        = [];
     protected $defaultOptions = [];
+    protected $scripts        = [];
+    protected $styles         = [];
 
     protected function decode($array = [])
     {
@@ -49,9 +51,21 @@ abstract class Widget extends Di
         }
     }
 
+    private function isAssoc($arr)
+    {
+        return array_keys($arr) !== range(0, count($arr) - 1);
+    }
+
     public function setOptions($options)
     {
         $this->options = array_replace_recursive($this->options, $options);
+
+        return $this;
+    }
+
+    public function defaultOptions($options)
+    {
+        $this->defaultOptions = array_replace_recursive($this->defaultOptions, $options);
 
         return $this;
     }
@@ -62,7 +76,7 @@ abstract class Widget extends Di
             $this->options['options'] = [];
         }
 
-        return array_merge($this->defaultOptions, $this->options['options']);
+        return array_replace_recursive($this->defaultOptions, $this->options['options']);
     }
 
     protected function getDecodedOptions()
@@ -70,17 +84,31 @@ abstract class Widget extends Di
         return $this->decode($this->getOptions());
     }
 
-    protected function setRun($name)
+    protected function setRun($name, $selector = null)
     {
-        $selector = $this->options['selector'];
-        $options  = $this->getDecodedOptions();
-        $js       = 'jQuery("'.$selector.'").livequery(function(){$(this).'.$name.'('.$options.');});';
-        $this->template->addScriptDeclaration($js);
-    }
+        //Add Scripts
+        foreach ($this->scripts as $script) {
+            $this->get('template')->script($script, 'bower');
+        }
 
-    private function isAssoc($arr)
-    {
-        return array_keys($arr) !== range(0, count($arr) - 1);
+        //Add Styles
+        foreach ($this->styles as $style) {
+            $this->get('template')->styleSheet($style, 'bower');
+        }
+
+        $selectors   = [];
+        $selectors[] = $this->options['selector'];
+        $selectors[] = '[role='.$name.']';
+        if ($selector) {
+            $selectors[] = $selector;
+        }
+
+        $js = 'jQuery("'.implode(',', $selectors).'").livequery(function(){';
+        $js .= '     var $this = $(this);';
+        $js .= '     $this.'.$name.'('.$this->getDecodedOptions().');';
+        $js .= '});';
+
+        $this->get('template')->addScriptDeclaration($js);
     }
 
     public function beforeRun()

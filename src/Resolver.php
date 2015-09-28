@@ -17,7 +17,7 @@ use Speedwork\Util\Utility;
 /**
  * @author sankar <sankar.suda@gmail.com>
  */
-class Application extends Di
+class Resolver extends Di
 {
     /**
      * used to inject modules dynamically.
@@ -564,16 +564,10 @@ class Application extends Di
      **/
     public function helper($helperName)
     {
-        static $instances;
+        $signature = 'helper'.strtolower($helperName);
 
-        if (!isset($instances)) {
-            $instances = [];
-        }
-
-        $signature = 'Helper'.strtolower($helperName);
-
-        if ($instances[$signature]) {
-            return $instances[$signature];
+        if ($this->has($signature)) {
+            return $this->get($signature);
         }
 
         $helperName = explode('.', $helperName);
@@ -586,7 +580,7 @@ class Application extends Di
         $helper = $helperName[0];
 
         $paths       = [];
-        $helperClass = ucfirst($helper).'Helper';
+        $helperClass = ucfirst($helper);
 
         if ($component) {
             $component = $this->sanitize($component);
@@ -622,12 +616,12 @@ class Application extends Di
                     $instance->$beforeRun();
                 }
 
-                $instances[$signature] = &$instance;
+                $this->set($signature, $instance);
                 break;
             }
         }
 
-        return $instances[$signature];
+        return $this->get($signature);
     }
 
     /**
@@ -638,18 +632,12 @@ class Application extends Di
      **/
     public function widget($name, $options = [], $includeOnly = false)
     {
-        static $instances;
+        $name = str_replace(' ', '', ucwords(str_replace('-', ' ', $name)));
+        $name = strtolower($name);
 
-        if (!isset($instances)) {
-            $instances = [];
-        }
+        $signature = 'widget'.strtolower($name);
 
-        $name    = str_replace(' ', '', ucwords(str_replace('-', ' ', $name)));
-        $name[0] = strtolower($name[0]);
-
-        $signature = 'Widget'.strtolower($name);
-
-        if (!$instances[$signature]) {
+        if (!$this->has($signature)) {
             $widgetName = explode(':', $name);
             $component  = $widgetName[1];
 
@@ -657,7 +645,7 @@ class Application extends Di
             $widget  = $widget1[0];
             $view    = $widget1[1];
 
-            $widgetClass = ($view) ? ucfirst($view).'Widget' : ucfirst($widget).'Widget';
+            $widgetClass = ($view) ? ucfirst($view) : ucfirst($widget);
 
             if ($component) {
                 $component = $this->sanitize($component);
@@ -708,20 +696,19 @@ class Application extends Di
 
                     require_once $path['file'];
 
-                    $instances[$signature]['object'] = new $widgetClass($this->di);
-                    $instances[$signature]['url']    = $path['url'];
+                    $this->set($signature, new $widgetClass($this->di));
+                    $this->set($signature.'url', $path['url']);
 
                     break;
                 }
             }
         }
 
-        if (empty($instances[$signature])) {
+        if (!$this->has($signature)) {
             throw new \Exception("Widget '".$name."' not found", 1);
         }
 
-        $instance = $instances[$signature]['object'];
-        $this->setPath($instances[$signature]['url']);
+        $this->setPath($this->get($signature.'url'));
 
         $beforeRun = 'beforeRun';
         $afterRun  = 'afterRun';
@@ -734,8 +721,8 @@ class Application extends Di
             $options['selector'] = '.'.str_replace('.', '-', $name);
         }
 
+        $instance = $this->get($signature);
         $instance->setOptions($options);
-
         $instance->$beforeRun();
 
         if ($includeOnly) {
@@ -830,10 +817,15 @@ class Application extends Di
 
         $date_range = $data['date_range'];
         if (is_array($date_range)) {
-            foreach ($date_range as $k => $v) {
-                $date = explode('-', $v);
-                $from = trim($date[0]);
-                $to   = trim($date[1]);
+            foreach ($date_range as $k => $date) {
+                if (!is_array($date)) {
+                    $date = explode('-', $date);
+                    $date = [
+                        'from' => $date[0],
+                        'to'   => $date[1],
+                    ];
+                }
+
                 if ($from && $to) {
                     $conditions[] = ['DATE('.$alias.$k.') BETWEEN ? AND ? ' => [
                         Utility::strtotime($from, true),
@@ -850,10 +842,15 @@ class Application extends Di
 
         $time_range = $data['time_range'];
         if (is_array($time_range)) {
-            foreach ($time_range as $k => $v) {
-                $date = explode('-', $v);
-                $from = trim($date[0]);
-                $to   = trim($date[1]);
+            foreach ($time_range as $k => $date) {
+                if (!is_array($date)) {
+                    $date = explode('-', $date);
+                    $date = [
+                        'from' => $date[0],
+                        'to'   => $date[1],
+                    ];
+                }
+
                 if ($from && $to) {
                     $conditions[] = ['DATE(FROM_UNIXTIME('.$alias.$k.')) BETWEEN ? AND ? ' => [
                         Utility::strtotime($from, true),
@@ -865,6 +862,36 @@ class Application extends Di
                 if ($from && empty($to)) {
                     $conditions[] = ['DATE(FROM_UNIXTIME('.$alias.$k.'))' => Utility::strtotime($from, true)];
                 }
+            }
+        }
+
+        $date_range = $data['unix_range'];
+        if (is_array($date_range)) {
+            foreach ($date_range as $k => $date) {
+                if (!is_array($date)) {
+                    $date = explode('-', $date);
+                    $date = [
+                        'from' => $date[0],
+                        'to'   => $date[1],
+                    ];
+                }
+
+                $from = trim($date['from']);
+                $to   = trim($date['to']);
+
+                if ($from && empty($to)) {
+                    $to = $from;
+                }
+
+                if (!is_numeric($from)) {
+                    $from = Utility::strtotime($from.' 00:00:00');
+                }
+
+                if (!is_numeric($to)) {
+                    $to = Utility::strtotime($to.' 23:59:59');
+                }
+
+                $conditions[] = [($alias.$k).' BETWEEN ? AND ? ' => [$from, $to]];
             }
         }
 

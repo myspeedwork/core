@@ -176,18 +176,29 @@ class Acl extends Di
             ]
         );
 
+        $event = new Event('event.members.login.failed', null, [
+            'username' => $username,
+            'passowrd' => $password,
+        ]);
+
         if (empty($row['userid'])) {
+            $this->eventManager()->dispatch($event);
+
             return false;
         }
 
         $key = ($hash) ?  unsalt($password, $row['password']) : $password;
         // check if passwords match
         if (strcmp($key, $row['password'])) {
+            $this->eventManager()->dispatch($event);
+
             return false;
         }
 
         // if that user is inactive send status
         if ($row['status'] != 1) {
+            $this->eventManager()->dispatch($event);
+
             return $row['status'];
         }
 
@@ -197,6 +208,8 @@ class Acl extends Di
 
         // Check whether can allow to view index
         if (!$this->isAllowed()) {
+            $this->eventManager()->dispatch($event);
+
             return false;
         }
 
@@ -230,9 +243,19 @@ class Acl extends Di
         return true;
     }
 
-    public function checkUserByLogin(&$data, $conditions = [])
+    public function checkUserByLogin(&$data, $conditions = [], $exists = false)
     {
-        $fields   = $this->getLoginFields();
+        $fields = $this->getLoginFields();
+        if ($exists) {
+            $newFields = [];
+            foreach ($data as $key => $value) {
+                if (in_array($key, $fields)) {
+                    $newFields[] = $key;
+                }
+            }
+            $fields = $newFields;
+        }
+
         $patterns = Configure::read('members.login_filters');
         if (!is_array($patterns)) {
             $patterns = [];

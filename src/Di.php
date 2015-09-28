@@ -12,6 +12,7 @@
 namespace Speedwork\Core;
 
 use Speedwork\Config\Configure;
+use Speedwork\Container\Container;
 use Speedwork\Util\Router;
 
 /**
@@ -146,7 +147,7 @@ class Di
      *
      * @return [type] [description]
      */
-    public function redirect($url, $rewrite = true, $time = 0)
+    public function redirect($url, $time = 0, $rewrite = true)
     {
         if (empty($url)) {
             $url = 'index.php';
