@@ -96,49 +96,43 @@ class Resolver extends Di
             return false;
         }
 
-        static $instances;
-        if (!isset($instances)) {
-            $instances = [];
-        }
-
         $option    = $this->sanitize($option);
-        $signature = 'Controller'.$option;
+        $signature = 'controller'.$option;
 
-        $url  = $this->getPath($option);
-        $path = $url['path'];
-        $url  = $url['url'];
-
-        if (empty($instances[$signature])) {
+        if (!$this->has($signature)) {
             $name       = ucfirst($option);
             $class_name = 'Controller';
+
+            $url  = $this->getPath($option);
+            $path = $url['path'];
+            $url  = $url['url'];
 
             //include Controller
             $file = $path.'components'.DS.$option.DS.$class_name.'.php';
 
             if (!file_exists($file)) {
-                throw new \Exception('Controller name '.$option.' not found', 1);
+                throw new \Exception('Controller '.$option.' not found', 1);
             }
 
             $class = 'Components\\'.$name.'\\'.$class_name;
 
             require_once $file;
 
-            $instances[$signature] = new $class();
-            $instances[$signature]->setContainer($this->di);
+            $controller = new $class();
+            $controller->setContainer($this->di);
+            $controller->{'model'} = $this->loadModel($option);
 
-            $instances[$signature]->{'model'} = $this->loadModel($option);
+            $this->set($signature, $controller);
+            $this->set($signature.'.assets', $url.'components/'.$option.'/assets/');
+        } else {
+            $controller = $this->get($signature);
         }
 
         if ($instance === 2) {
-            return $instances[$signature];
+            return $controller;
         }
 
-        $controller = $instances[$signature];
-
-        $method = ($view) ? $view : 'index';
-        $method = strtolower($method);
-
-        $this->setPath($url.'components/'.$option.'/assets/');
+        $this->setPath($this->get($signature.'.assets'));
 
         $beforeRender = 'beforeRender';
 
@@ -150,6 +144,7 @@ class Resolver extends Di
             return $controller;
         }
 
+        $method       = ($view) ? $view : 'index';
         $beforeMethod = 'before'.ucfirst($method);
         $afterMethod  = 'after'.ucfirst($method);
 
@@ -170,16 +165,11 @@ class Resolver extends Di
 
     public function loadModel($option)
     {
-        static $instances;
-        if (!isset($instances)) {
-            $instances = [];
-        }
-
         $option = $this->sanitize($option);
 
-        $signature = 'Model'.$option;
+        $signature = 'model'.$option;
 
-        if (empty($instances[$signature])) {
+        if (!$this->has($signature)) {
             $url  = $this->getPath($option);
             $path = $url['path'];
 
@@ -196,16 +186,21 @@ class Resolver extends Di
 
             require_once $file;
 
-            $instances[$signature] = new $class();
-            $instances[$signature]->setContainer($this->di);
+            $model = new $class();
+            $model->setContainer($this->di);
+
+            $this->set($signature, $model);
+        } else {
+            $model = $this->get($signature);
         }
 
         $beforeRender = 'beforeRender';
-        if (method_exists($instances[$signature], 'beforeRender')) {
-            $instances[$signature]->$beforeRender();
+
+        if (method_exists($model, 'beforeRender')) {
+            $model->$beforeRender();
         }
 
-        return $instances[$signature];
+        return $model;
     }
 
     protected function findView($option, $view = '', $type = 'component')
@@ -590,38 +585,43 @@ class Resolver extends Di
             $paths[] = [
                 'file'  => $dir.'components'.DS.$component.DS.'helpers'.DS.(($group) ? $group.DS : '').$helperClass.'.php',
                 'class' => 'Components\\'.ucfirst($component).'\\Helpers\\'.$helperClass,
-                ];
+            ];
         } else {
             $paths[] = [
                 'file'  => APP.'system'.DS.'helpers'.DS.$helperClass.'.php',
                 'class' => 'System\Helpers\\'.$helperClass,
-                ];
+            ];
 
             $paths[] = [
-                'file'  => SYS.'system'.DS.'helpers'.DS.$helperClass.'.php',
-                'class' => 'System\\Helpers\\'.$helperClass,
-                ];
+                'class' => 'Speedwork\\Helpers\\'.$helperClass,
+            ];
         }
 
         foreach ($paths as $path) {
-            if (file_exists($path['file'])) {
-                $helperClass = $path['class'];
-
+            $exists = false;
+            if ($path['file'] && file_exists($path['file'])) {
+                $exists = true;
                 require_once $path['file'];
+            } elseif (class_exists($path['class'])) {
+                $exists = true;
+            }
 
-                $beforeRun = 'beforeRun';
-                $instance  = new $helperClass($this->di);
+            if ($exists) {
+                $helperClass = $path['class'];
+                $beforeRun   = 'beforeRun';
+                $instance    = new $helperClass($this->di);
 
                 if (method_exists($instance, $beforeRun)) {
                     $instance->$beforeRun();
                 }
 
                 $this->set($signature, $instance);
-                break;
+
+                return $instance;
             }
         }
 
-        return $this->get($signature);
+        return false;
     }
 
     /**
@@ -696,15 +696,18 @@ class Resolver extends Di
 
                     require_once $path['file'];
 
-                    $this->set($signature, new $widgetClass($this->di));
+                    $instance = new $widgetClass($this->di);
+                    $this->set($signature, $instance);
                     $this->set($signature.'url', $path['url']);
 
                     break;
                 }
             }
+        } else {
+            $instance = $this->get($signature);
         }
 
-        if (!$this->has($signature)) {
+        if (empty($instance)) {
             throw new \Exception("Widget '".$name."' not found", 1);
         }
 
@@ -721,16 +724,13 @@ class Resolver extends Di
             $options['selector'] = '.'.str_replace('.', '-', $name);
         }
 
-        $instance = $this->get($signature);
         $instance->setOptions($options);
         $instance->$beforeRun();
 
-        if ($includeOnly) {
-            return $instance;
+        if (!$includeOnly) {
+            $instance->run();
+            $instance->$afterRun();
         }
-
-        $instance->run();
-        $instance->$afterRun();
 
         return $instance;
     }
