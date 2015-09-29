@@ -122,17 +122,19 @@ class Resolver extends Di
             $controller->setContainer($this->di);
             $controller->{'model'} = $this->loadModel($option);
 
+            $assets = $url.'components/'.$option.'/assets/';
             $this->set($signature, $controller);
-            $this->set($signature.'.assets', $url.'components/'.$option.'/assets/');
+            $this->set($signature.'.assets', $assets);
         } else {
             $controller = $this->get($signature);
+            $assets     = $this->get($signature.'.assets');
         }
 
         if ($instance === 2) {
             return $controller;
         }
 
-        $this->setPath($this->get($signature.'.assets'));
+        $this->setPath($assets);
 
         $beforeRender = 'beforeRender';
 
@@ -250,19 +252,13 @@ class Resolver extends Di
 
     public function requestApi($component)
     {
-        static $instances;
-        if (!isset($instances)) {
-            $instances = [];
-        }
-
         $component = $this->sanitize($component);
+        $signature = 'api'.$component;
 
-        $signature = 'Api'.$component;
+        if (!$this->has($signature)) {
+            $url  = $this->getPath($component);
+            $path = $url['path'];
 
-        $url  = $this->getPath($component);
-        $path = $url['path'];
-
-        if (empty($instances[$signature])) {
             $name       = ucfirst($component);
             $class_name = 'Api';
 
@@ -274,26 +270,29 @@ class Resolver extends Di
 
             $class = 'Components\\'.$name.'\\'.$class_name;
 
-            if (!class_exists($class_name)) {
+            if (!class_exists($class)) {
                 include $model_file;
             }
 
             try {
-                $component = new $class();
+                $instance = new $class();
             } catch (\Exception $e) {
                 return ['A400A' => 'Api Not Implemented'];
             }
 
-            $instances[$signature] = $component;
-            $instances[$signature]->setContainer($this->di);
+            $instance->setContainer($this->di);
+
+            $this->set($signature, $instance);
+        } else {
+            $instance = $this->get($signature);
         }
 
         $beforeRender = 'beforeRender';
-        if (method_exists($instances[$signature], 'beforeRender')) {
-            $instances[$signature]->$beforeRender();
+        if (method_exists($instance, 'beforeRender')) {
+            $instance->$beforeRender();
         }
 
-        return $instances[$signature];
+        return $instance;
     }
 
     public function requestController($component, $options = [])
@@ -325,15 +324,10 @@ class Resolver extends Di
 
     public function loadModuleController($module, $view = '', &$options = [])
     {
-        static $instances;
-        if (!isset($instances)) {
-            $instances = [];
-        }
-
         $module    = $this->sanitize($module, 'module');
-        $signature = 'Mod'.$module;
+        $signature = 'mod'.$module;
 
-        if (empty($instances[$signature])) {
+        if (!$this->has($signature)) {
             $url  = $this->getPath($module, 'module');
             $path = $url['path'];
             $url  = $url['url'];
@@ -350,46 +344,39 @@ class Resolver extends Di
 
             $class = 'Modules\\'.$name.'\\'.$class_name;
 
-            $instances[$signature]['path'] = $url;
-
             require_once $file;
 
-            $instances[$signature]['object'] = new $class();
-            $instances[$signature]['object']->setContainer($this->di);
+            $instance = new $class();
+            $instance->setContainer($this->di);
+
+            $assets = $url.'modules/'.$module.'/assets/';
+            $this->set($signature, $instance);
+            $this->set($signature.'.assets', $assets);
+        } else {
+            $assets   = $this->get($signature.'.assets');
+            $instance = $this->get($signature);
         }
 
-        $this->setPath($instances[$signature]['path'].'modules/'.$module.'/assets/');
-
-        $action = &$instances[$signature]['object'];
+        $this->setPath($assets);
 
         if ($options['position']) {
-            $action->position = $options['position'];
+            $instance->position = $options['position'];
         }
         //check any beforeRender method
         $beforeRender = 'beforeRender';
-        if (method_exists($action, $beforeRender)) {
-            $action->$beforeRender();
+        if (method_exists($instance, $beforeRender)) {
+            $instance->$beforeRender();
         }
 
-        if ($view && (method_exists($action, $view) || method_exists($action, '__call'))) {
-            $response = $action->$view($options);
+        if ($view && (method_exists($instance, $view) || method_exists($instance, '__call'))) {
+            $response = $instance->$view($options);
         } else {
-            $response = $action->index($options);
+            $response = $instance->index($options);
         }
 
         return $response;
     }
 
-    public function addModule($position, $module, $view = '', &$options = [], $iscustom = false)
-    {
-        $this->_modules[$position][] = [
-            'order'    => 1,
-            'module'   => $module,
-            'view'     => $view,
-            'options'  => $options,
-            'iscustom' => $iscustom,
-        ];
-    }
     /**
      * Used to include module.
      *
@@ -403,7 +390,7 @@ class Resolver extends Di
         }
 
         //load index method if module is custom
-        if ($module == 'mod_custom') {
+        if ($module == 'custom') {
             if ($iscustom === true) {
                 $data = $this->database->find('#__core_modules', 'first', [
                     'fields'     => ['config'],
@@ -665,27 +652,29 @@ class Resolver extends Di
                     'url'   => $url.'components/'.$component.'/widgets/assets/',
                 ];
             } else {
+                $class = 'System\Widgets\\'.$widgetClass;
+
                 $paths[] = [
                     'file'  => APP.'system'.DS.'widgets'.DS.$widget.DS.$widgetClass.'.php',
-                    'class' => 'System\Widgets\\'.$widgetClass,
+                    'class' => $class,
                     'url'   => _APP_URL.'system/widgets/'.$widget.'/assets/',
                 ];
 
                 $paths[] = [
                     'file'  => SYS.'system'.DS.'widgets'.DS.$widget.DS.$widgetClass.'.php',
-                    'class' => 'System\\Widgets\\'.$widgetClass,
+                    'class' => $class,
                     'url'   => _SYSURL.'system/widgets/'.$widget.'/assets/',
                 ];
 
                 $paths[] = [
                     'file'  => APP.'system'.DS.'widgets'.DS.$widgetClass.'.php',
-                    'class' => 'System\Widgets\\'.$widgetClass,
+                    'class' => $class,
                     'url'   => _APP_URL.'system/widgets/assets/',
                 ];
 
                 $paths[] = [
                     'file'  => SYS.'system'.DS.'widgets'.DS.$widgetClass.'.php',
-                    'class' => 'System\\Widgets\\'.$widgetClass,
+                    'class' => $class,
                     'url'   => _SYSURL.'system/widgets/assets/',
                 ];
             }
@@ -696,18 +685,15 @@ class Resolver extends Di
 
                     require_once $path['file'];
 
-                    $instance = new $widgetClass($this->di);
-                    $this->set($signature, $instance);
+                    $this->set($signature, new $widgetClass($this->di));
                     $this->set($signature.'url', $path['url']);
 
                     break;
                 }
             }
-        } else {
-            $instance = $this->get($signature);
         }
 
-        if (empty($instance)) {
+        if (!$this->has($signature)) {
             throw new \Exception("Widget '".$name."' not found", 1);
         }
 
@@ -724,13 +710,16 @@ class Resolver extends Di
             $options['selector'] = '.'.str_replace('.', '-', $name);
         }
 
+        $instance = $this->get($signature);
         $instance->setOptions($options);
         $instance->$beforeRun();
 
-        if (!$includeOnly) {
-            $instance->run();
-            $instance->$afterRun();
+        if ($includeOnly) {
+            return $instance;
         }
+
+        $instance->run();
+        $instance->$afterRun();
 
         return $instance;
     }
