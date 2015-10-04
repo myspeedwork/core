@@ -3,7 +3,7 @@
 /**
  * This file is part of the Speedwork package.
  *
- * (c) 2s Technologies <info@2stechno.com>
+ * @link http://github.com/speedwork
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -597,6 +597,7 @@ class Resolver extends Di
                 $helperClass = $path['class'];
                 $beforeRun   = 'beforeRun';
                 $instance    = new $helperClass($this->di);
+                //$instance->setContainer();
 
                 if (method_exists($instance, $beforeRun)) {
                     $instance->$beforeRun();
@@ -608,7 +609,7 @@ class Resolver extends Di
             }
         }
 
-        return false;
+        throw new Exception($helper.' not found');
     }
 
     /**
@@ -685,28 +686,34 @@ class Resolver extends Di
 
                     require_once $path['file'];
 
-                    $this->set($signature, new $widgetClass($this->di));
-                    $this->set($signature.'url', $path['url']);
+                    $assets   = $path['url'];
+                    $instance = new $widgetClass();
+                    $instance->setContainer($this->di);
+
+                    $this->set($signature, $instance);
+                    $this->set($signature.'.url', $assets);
 
                     break;
                 }
             }
+        } else {
+            $instance = $this->get($signature);
+            $assets   = $this->get($signature.'.url');
         }
 
-        if (!$this->has($signature)) {
+        if (!$instance) {
             throw new \Exception("Widget '".$name."' not found", 1);
         }
 
-        $this->setPath($this->get($signature.'url'));
+        $this->setPath($assets);
 
         $beforeRun = 'beforeRun';
         $afterRun  = 'afterRun';
 
-        if (!is_array($options['options'])) {
-            $options['options'] = [];
-        }
-
         if (empty($options['selector'])) {
+            $oldOptions          = $options;
+            $options             = [];
+            $options['options']  = $oldOptions;
             $options['selector'] = '.'.str_replace('.', '-', $name);
         }
 

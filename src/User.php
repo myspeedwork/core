@@ -3,7 +3,7 @@
 /**
  * This file is part of the Speedwork package.
  *
- * (c) 2s Technologies <info@2stechno.com>
+ * @link http://github.com/speedwork
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -63,7 +63,7 @@ class User extends Di
      **/
     public function getOption($option_name)
     {
-        $data  = $this->database->find($this->table, 'first', [
+        $data = $this->database->find($this->table, 'first', [
             'conditions' => ['option_name' => $option_name],
             'fields'     => ['option_value'],
             ]

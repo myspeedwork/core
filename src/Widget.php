@@ -3,7 +3,7 @@
 /**
  * This file is part of the Speedwork package.
  *
- * (c) 2s Technologies <info@2stechno.com>
+ * @link http://github.com/speedwork
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -96,16 +96,23 @@ abstract class Widget extends Di
             $this->get('template')->styleSheet($style, 'bower');
         }
 
-        $selectors   = [];
-        $selectors[] = $this->options['selector'];
+        $selectors = [];
+
+        $defaultSelector = $this->options['selector'];
+        if (empty($defaultSelector)) {
+            $selectors[] = '.'.str_replace('.', '-', $name);
+        } else {
+            $selectors[] = $defaultSelector;
+        }
         $selectors[] = '[role='.$name.']';
+
         if ($selector) {
             $selectors[] = $selector;
         }
 
         $js = 'jQuery("'.implode(',', $selectors).'").livequery(function(){';
-        $js .= '     var $this = $(this);';
-        $js .= '     $this.'.$name.'('.$this->getDecodedOptions().');';
+        $js .= 'var $this = $(this);';
+        $js .= '$this.'.$name.'('.$this->getDecodedOptions().');';
         $js .= '});';
 
         $this->get('template')->addScriptDeclaration($js);

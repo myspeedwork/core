@@ -11,10 +11,17 @@
 
 namespace Speedwork\Core;
 
+use Cake\Event\Event;
+use Cake\Event\EventManagerTrait as BaseEventManagerTrait;
+
 /**
  * @author sankar <sankar.suda@gmail.com>
  */
-class Helper extends Di
+trait EventManagerTrait
 {
-    use ResolverTrait;
+    use BaseEventManagerTrait;
+    protected function event($name, $params = [])
+    {
+        return new Event($name, $this, $params);
+    }
 }
