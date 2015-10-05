@@ -106,8 +106,12 @@ abstract class Widget extends Di
         }
         $selectors[] = '[role='.$name.']';
 
-        if ($selector) {
-            $selectors[] = $selector;
+        if (!empty($selector)) {
+            if (is_array($selector)) {
+                $selectors = array_merge($selectors, $selector);
+            } else {
+                $selectors[] = $selector;
+            }
         }
 
         $js = 'jQuery("'.implode(',', $selectors).'").livequery(function(){';

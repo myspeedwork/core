@@ -70,8 +70,9 @@ trait ResolverTrait
     {
         $is_ajax = $this->get('is_ajax_request');
 
-        $ajax           = [];
-        $ajax['enable'] = ($is_ajax == false) ? true : false;
+        $ajax            = [];
+        $ajax['enable']  = ($is_ajax == false) ? true : false;
+        $ajax['disable'] = $is_ajax;
 
         if ($is_ajax == false) {
             $url = (empty($url)) ? Utility::currentUrl() : $this->link($url);
@@ -80,23 +81,26 @@ trait ResolverTrait
             $method = ($method && in_array($method, ['POST', 'GET'])) ? $method : 'POST';
 
             unset($params['method']);
+            $params['class'] = 'render-'.rand();
 
-            $start = '<form id="ajax_form" method="'.$method.'" action="'.$url.'">';
-            $start .= '<input type="hidden" id="page" name="page" value="2" />';
-            $start .= '<input type="hidden" id="total" name="total" value="'.$total.'" />';
+            $start = '<form role="render" class="'.$params['class'].'" id="ajax_form" method="'.$method.'" action="'.$url.'">';
+            $mid   = '<input type="hidden" id="page" name="page" value="2" />';
+            $mid .= '<input type="hidden" id="total" name="total" value="'.$total.'" />';
 
             foreach ($params as $k => $v) {
-                $start .= '<input type="hidden" name="'.$k.'" value="'.$v.'" />';
+                $mid .= '<input type="hidden" name="'.$k.'" value="'.$v.'" />';
             }
 
-            $end    = '</form>';
-            $return = $start.$end;
+            $end  = '</form>';
+            $form = $start.$mid.$end;
 
-            $this->assign('autoloadajaxquery', $return);
+            $this->assign('autoloadajaxquery', $form);
 
-            $ajax['form']  = $return;
-            $ajax['start'] = $start;
+            $ajax['form']  = $form;
+            $ajax['start'] = $start.$mid;
             $ajax['end']   = $end;
+
+            $params['class'] = '.'.$params['class'];
         }
 
         $params['total'] = $total;

@@ -707,7 +707,7 @@ class Resolver extends Di
             $oldOptions          = $options;
             $options             = [];
             $options['options']  = $oldOptions;
-            $options['selector'] = '.'.str_replace('.', '-', $name);
+            $options['selector'] = '.'.strtolower(str_replace('.', '-', $name));
         }
 
         $instance = $this->get($signature);
