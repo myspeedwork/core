@@ -621,7 +621,6 @@ class Resolver extends Di
     public function widget($name, $options = [], $includeOnly = false)
     {
         $name = str_replace(' ', '', ucwords(str_replace('-', ' ', $name)));
-        $name = strtolower($name);
 
         $signature = 'widget'.strtolower($name);
 
@@ -630,10 +629,10 @@ class Resolver extends Di
             $component  = $widgetName[1];
 
             $widget1 = explode('.', $widgetName[0]);
-            $widget  = $widget1[0];
+            $widget  = strtolower($widget1[0]);
             $view    = $widget1[1];
 
-            $widgetClass = ($view) ? ucfirst($view) : ucfirst($widget);
+            $widgetClass = ($view) ? ucfirst($view) : ucfirst($widget1[0]);
 
             if ($component) {
                 $component = $this->sanitize($component);
