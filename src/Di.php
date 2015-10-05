@@ -125,14 +125,14 @@ class Di
 
     public function assign($key, $value)
     {
-        $this->get('engine')->assignByRef($key, $value);
+        $this->get('engine')->assign($key, $value);
 
         return $this;
     }
 
     public function release($key)
     {
-        return $this->get('engine')->getTemplateVars($key);
+        return $this->get('engine')->release($key);
     }
 
     public function setData($data)

@@ -237,7 +237,7 @@ class Resolver extends Di
             return;
         }
 
-        return $this->get('engine')->fetch($view_file);
+        return $this->get('engine')->create($view_file)->render();
     }
 
     public function requestLayout($component, $view = '', $type = 'component')
@@ -609,7 +609,7 @@ class Resolver extends Di
             }
         }
 
-        throw new Exception($helper.' not found');
+        throw new Exception($helper.' helper not found');
     }
 
     /**
@@ -644,12 +644,6 @@ class Resolver extends Di
                     'file'  => $dir.'components'.DS.$component.DS.'widgets'.DS.$widget.DS.$widgetClass.'.php',
                     'class' => 'Components\\'.ucfirst($component).'\\Widgets\\'.$widgetClass,
                     'url'   => $url.'components/'.$component.'/widgets/'.$widget.'/assets/',
-                ];
-
-                $paths[] = [
-                    'file'  => $dir.'components'.DS.$component.DS.'widgets'.DS.$widgetClass.'.php',
-                    'class' => 'Components\\'.ucfirst($component).'\\Widgets\\'.$widgetClass,
-                    'url'   => $url.'components/'.$component.'/widgets/assets/',
                 ];
             } else {
                 $class = 'System\Widgets\\'.$widgetClass;
