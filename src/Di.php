@@ -158,8 +158,8 @@ class Di
             $url = $this->link($url);
         }
 
-        $is_ajax_request = $this->get('is_ajax_request');
-        if ($is_ajax_request) {
+        $ajax = $this->get('is_ajax_request');
+        if ($ajax) {
             $status = $this->release('status');
 
             $status['redirect'] = $url;

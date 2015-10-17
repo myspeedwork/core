@@ -216,14 +216,17 @@ class Resolver extends Di
 
         $view = explode('.', strtolower(trim($view)));
 
+        $extensions = ['.tpl'];
+
         $views   = [];
-        $views[] = _TMP_PATH.$folder.DS.$option.DS.((!empty($view[0])) ? implode(DS, $view) : 'index').'.tpl';
-        $views[] = $path.$folder.DS.$option.DS.'views'.DS.((!empty($view[0])) ? implode(DS, $view) : 'index').'.tpl';
+        $views[] = _TMP_PATH.$folder.DS.$option.DS.((!empty($view[0])) ? implode(DS, $view) : 'index');
+        $views[] = $path.$folder.DS.$option.DS.'views'.DS.((!empty($view[0])) ? implode(DS, $view) : 'index');
 
         foreach ($views as $file) {
-            if (file_exists($file)) {
-                return $file;
-                break;
+            foreach ($extensions as $ext) {
+                if (file_exists($file.$ext)) {
+                    return $file.$ext;
+                }
             }
         }
 
@@ -313,13 +316,13 @@ class Resolver extends Di
     public function component($option, $view = null, $options = [])
     {
         $response = $this->loadController($option, $view, $options);
-        if (is_array($response)) {
-            foreach ($response as $key => $value) {
-                $this->assign($key, $value);
-            }
+        if (!is_array($response)) {
+            $response = [];
         }
 
-        return $this->loadView($option, $view);
+        $view_file = $this->findView($option, $view, 'component');
+
+        return $this->get('engine')->create($view_file, $response)->render();
     }
 
     public function loadModuleController($module, $view = '', &$options = [])
@@ -383,19 +386,19 @@ class Resolver extends Di
      * @param string            $module_name
      * @param string (optional) $view        (load file if any view type files)
      **/
-    public function module($module, $view = '', &$options = [], $iscustom = true)
+    public function module($option, $view = '', &$options = [], $iscustom = true)
     {
-        if (empty($module)) {
+        if (empty($option)) {
             return;
         }
 
         //load index method if module is custom
-        if ($module == 'custom') {
+        if ($option == 'custom') {
             if ($iscustom === true) {
                 $data = $this->database->find('#__core_modules', 'first', [
                     'fields'     => ['config'],
                     'conditions' => [
-                        'module'   => $module,
+                        'module'   => $option,
                         'mod_view' => $view,
                         ],
                     ]
@@ -409,15 +412,15 @@ class Resolver extends Di
             $view = '';
         }
 
-        $response = $this->loadModuleController($module, $view, $options);
+        $response = $this->loadModuleController($option, $view, $options);
 
-        if (is_array($response)) {
-            foreach ($response as $key => $value) {
-                $this->assign($key, $value);
-            }
+        if (!is_array($response)) {
+            $response = [];
         }
 
-        echo $this->loadView($module, $view, 'module');
+        $view_file = $this->findView($option, $view, 'module');
+
+        echo $this->get('engine')->create($view_file, $response)->render();
     }
 
     /**

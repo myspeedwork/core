@@ -72,36 +72,41 @@ trait ResolverTrait
 
         $ajax            = [];
         $ajax['enable']  = ($is_ajax == false) ? true : false;
-        $ajax['disable'] = $is_ajax;
+        $ajax['disable'] = ($is_ajax == false) ? true : false;
 
-        if ($is_ajax == false) {
-            $url = (empty($url)) ? Utility::currentUrl() : $this->link($url);
+        $form = [];
 
-            $method = strtoupper($params['method']);
-            $method = ($method && in_array($method, ['POST', 'GET'])) ? $method : 'POST';
+        $url = (empty($url)) ? Utility::currentUrl() : $this->link($url);
 
-            unset($params['method']);
-            $params['class'] = 'render-'.rand();
+        $method = strtoupper($params['method']);
+        $method = ($method && in_array($method, ['POST', 'GET'])) ? $method : 'POST';
 
-            $start = '<form role="render" class="'.$params['class'].'" id="ajax_form" method="'.$method.'" action="'.$url.'">';
-            $mid   = '<input type="hidden" id="page" name="page" value="2" />';
-            $mid .= '<input type="hidden" id="total" name="total" value="'.$total.'" />';
+        unset($params['method']);
 
-            foreach ($params as $k => $v) {
-                $mid .= '<input type="hidden" name="'.$k.'" value="'.$v.'" />';
-            }
+        $start = '<form id="ajax_form" method="'.$method.'" action="'.$url.'">';
+        $end   = '</form>';
 
-            $end  = '</form>';
-            $form = $start.$mid.$end;
+        $mid = '<input type="hidden" id="page" name="page" value="1" />';
+        $mid .= '<input type="hidden" id="total" name="total" value="'.$total.'" />';
 
-            $this->assign('autoloadajaxquery', $form);
-
-            $ajax['form']  = $form;
-            $ajax['start'] = $start.$mid;
-            $ajax['end']   = $end;
-
-            $params['class'] = '.'.$params['class'];
+        foreach ($params as $k => $v) {
+            $mid .= '<input type="hidden" name="'.$k.'" value="'.$v.'" />';
         }
+
+        $ajax['form']  = $start.$mid.$end;
+        $ajax['start'] = $start.$mid;
+        $ajax['end']   = $end;
+
+        $class           = 'render-'.rand();
+        $params['class'] = '.'.$class;
+
+        $start          = '<form role="render" class="'.$class.'" method="'.$method.'" action="'.$url.'">';
+        $form['start']  = $start.$mid;
+        $form['params'] = $mid;
+        $form['end']    = $end;
+        $form['class']  = $params['class'];
+
+        $ajax['fm'] = $form;
 
         $params['total'] = $total;
         $params['url']   = $url;

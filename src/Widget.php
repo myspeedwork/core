@@ -104,7 +104,7 @@ abstract class Widget extends Di
         } else {
             $selectors[] = $defaultSelector;
         }
-        $selectors[] = '[role='.$name.']';
+        $selectors[] = '[role='.strtolower($name).']';
 
         if (!empty($selector)) {
             if (is_array($selector)) {
