@@ -818,6 +818,9 @@ class Resolver extends Di
                     ];
                 }
 
+                $from = trim($date['from']);
+                $to   = trim($date['to']);
+
                 if ($from && $to) {
                     $conditions[] = ['DATE('.$alias.$k.') BETWEEN ? AND ? ' => [
                         Utility::strtotime($from, true),
@@ -842,6 +845,9 @@ class Resolver extends Di
                         'to'   => $date[1],
                     ];
                 }
+
+                $from = trim($date['from']);
+                $to   = trim($date['to']);
 
                 if ($from && $to) {
                     $conditions[] = ['DATE(FROM_UNIXTIME('.$alias.$k.')) BETWEEN ? AND ? ' => [
