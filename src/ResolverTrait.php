@@ -86,8 +86,8 @@ trait ResolverTrait
         $start = '<form id="ajax_form" method="'.$method.'" action="'.$url.'">';
         $end   = '</form>';
 
-        $mid = '<input type="hidden" id="page" name="page" value="1" />';
-        $mid .= '<input type="hidden" id="total" name="total" value="'.$total.'" />';
+        $start .= '<input type="hidden" id="page" name="page" value="1" />';
+        $start .= '<input type="hidden" id="total" name="total" value="'.$total.'" />';
 
         foreach ($params as $k => $v) {
             $mid .= '<input type="hidden" name="'.$k.'" value="'.$v.'" />';
