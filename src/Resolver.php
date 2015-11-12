@@ -62,8 +62,8 @@ class Resolver extends Di
 
     protected function setPath($path)
     {
-        if ($this->template) {
-            $this->template->setPath($path);
+        if ($this->has('template')) {
+            $this->get('template')->setPath($path);
         }
     }
 
@@ -205,8 +205,12 @@ class Resolver extends Di
         return $model;
     }
 
-    protected function findView($option, $view = '', $type = 'component')
+    protected function findView($option, $type = 'component')
     {
+        $option = explode('.', $option, 2);
+        $view   = $option[1];
+        $option = $option[0];
+
         $type   = (empty($type)) ? 'component' : $type;
         $option = $this->sanitize($option, $type);
         $folder = ($type == 'component') ? 'components' : 'modules';
@@ -235,7 +239,7 @@ class Resolver extends Di
 
     public function loadView($component, $view = '', $type = 'component')
     {
-        $view_file = $this->findView($component, $view, $type);
+        $view_file = $this->findView($component.'.'.$view, $type);
         if (empty($view_file)) {
             return;
         }
@@ -245,7 +249,7 @@ class Resolver extends Di
 
     public function requestLayout($component, $view = '', $type = 'component')
     {
-        $view_file = $this->findView($component, $view, $type);
+        $view_file = $this->findView($component.'.'.$view, $type);
         if (empty($view_file)) {
             return $this->findView('errors');
         }
@@ -320,7 +324,7 @@ class Resolver extends Di
             $response = [];
         }
 
-        $view_file = $this->findView($option, $view, 'component');
+        $view_file = $this->findView($option.'.'.$view, 'component');
 
         return $this->get('engine')->create($view_file, $response)->render();
     }
@@ -418,7 +422,7 @@ class Resolver extends Di
             $response = [];
         }
 
-        $view_file = $this->findView($option, $view, 'module');
+        $view_file = $this->findView($option.'.'.$view, 'module');
 
         echo $this->get('engine')->create($view_file, $response)->render();
     }

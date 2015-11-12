@@ -68,6 +68,17 @@ trait ResolverTrait
 
     public function ajax($url = null, $total = 0, $params = [])
     {
+        $is_api = $this->get('is_api_request');
+
+        if ($is_api) {
+            return false;
+        }
+
+        if (is_array($total)) {
+            $params = $total;
+            $total  = 0;
+        }
+
         $is_ajax = $this->get('is_ajax_request');
 
         $ajax            = [];

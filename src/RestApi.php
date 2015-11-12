@@ -193,7 +193,8 @@ class RestApi extends Api
         $controller->setData($this->request);
 
         $response = $controller->$method();
-        $api      = $response['api'];
+
+        $api = $response['api'];
         unset($response['api']);
 
         if ($api === false) {
@@ -202,40 +203,55 @@ class RestApi extends Api
             return $this->outputFormat($status, $data);
         }
 
+        $output = null;
+
         $return            = [];
         $return['status']  = (empty($response['status'])) ? 'OK' : $response['status'];
         $return['message'] = (empty($response['message'])) ? 'OK' : $response['message'];
+        $return['data']    = $output;
 
-        if ($api) {
-            if (is_callable($api)) {
-                $return['data'] = $api($response);
-            } elseif (is_array($api)) {
-                foreach ($api as $key => $value) {
-                    $value = explode('.', $value);
-                    $key   = (!is_numeric($key)) ? $key : end($value);
+        unset($response['status'], $response['message']);
 
-                    $data = $response;
-                    foreach ($value as $val) {
-                        $data = $data[$val];
-                    }
-                    $return['data'][$key] = $data;
+        if ($api && is_callable($api)) {
+            $output = $api($response);
+        } elseif ($api && is_array($api)) {
+            foreach ($api as $key => $value) {
+                $value = explode('.', $value);
+                $key   = (!is_numeric($key)) ? $key : end($value);
+
+                $data = $response;
+                foreach ($value as $val) {
+                    $data = $data[$val];
                 }
+                $output[$key] = $data;
             }
         } else {
-            unset($response['status'], $response['message']);
-
-            if (isset($response['rows'])) {
-                $data = $response['rows']['data'];
-                unset($response['rows']['data']);
-                $pagination                   = $response['rows'];
-                $return['data'][$option.'s']  = $data;
-                $return['data']['pagination'] = $pagination;
-            } else {
-                $return['data'] = $response;
-            }
+            $output = $response;
         }
 
-        unset($response, $pagination, $data);
+        if ($output['data']) {
+            $output['rows'] = $output['data'];
+            unset($output['data']);
+        } elseif (isset($output['rows'])) {
+            $data   = $output['rows']['data'];
+            $paging = $output['rows']['paging'];
+
+            unset($output['rows']['data'], $output['rows']['paging']);
+            $items = $output['rows'];
+            unset($output['rows']);
+
+            $output           = array_merge($items, $output);
+            $output['rows']   = $data;
+            $output['paging'] = $paging;
+        }
+
+        if (isset($output['paging'])) {
+            unset($output['paging']['html']);
+        }
+
+        $return['data'] = $output;
+
+        unset($response, $output, $data, $paging, $items);
 
         return $this->output($return);
     }
@@ -269,24 +285,26 @@ class RestApi extends Api
 
             case 'xml':
                 $output = Xml::fromArray($output, 'api', $name);
-                RestUtils::sendResponse($output, 'application/xml');
+
+                return RestUtils::sendResponse($output, 'application/xml');
                 break;
             case 'php':
-                RestUtils::sendResponse(serialize($output));
+                return RestUtils::sendResponse(serialize($output));
                 break;
             case 'jsonp':
                 if ($request['callback']) {
                     $output = json_encode($output);
                     header('Content-Type: text/javascript; charset=utf8');
                     $callback = $request['callback'];
-                    echo $callback.'('.$output.');';
+
+                    return $callback.'('.$output.');';
                 } else {
-                    RestUtils::sendResponse(json_encode($output), 'application/json', $name);
+                    return RestUtils::sendResponse(json_encode($output), 'application/json');
                 }
                 break;
             case 'json':
             default:
-                RestUtils::sendResponse(json_encode($output), 'application/json', $name);
+                return RestUtils::sendResponse(json_encode($output), 'application/json');
                 break;
         }
     }
@@ -327,7 +345,7 @@ class RestApi extends Api
         if ($this->cache) {
             $cache_key = 'api_cache_'.$api_key;
 
-            $status = Cache::remember($cache_key, function () use ($sig) {
+            $status = $this->get('cache')->remember($cache_key, function () use ($sig) {
                 return $this->validate($sig);
             }, 'api');
         } else {
@@ -454,10 +472,10 @@ class RestApi extends Api
             $token   = $api_key[0];
 
             if ($api_key[1] === 'x') {
-                $user = $this->acl->getUserBy('token', $token);
+                $user = $this->get('acl')->getUserBy('token', $token);
             } else {
                 $password = ($this->useronly) ? null : $api_key[1];
-                $user     = $this->acl->isValidUser($token, $password);
+                $user     = $this->get('acl')->isValidUser($token, $password);
             }
 
             if ($user === false) {
@@ -473,7 +491,7 @@ class RestApi extends Api
                 return false;
             }
 
-            $user = $this->acl->getUserBy('userid', $row['fkuserid']);
+            $user = $this->get('acl')->getUserBy('userid', $row['fkuserid']);
         }
 
         if ($user['status'] != 1) {
