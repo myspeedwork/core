@@ -312,7 +312,7 @@ class Resolver extends Di
         return $this->loadModel($component);
     }
 
-    public function requestAction($option, $view = null, &$options = [])
+    public function requestAction($option, $view = null, $options = [])
     {
         echo $this->component($option, $view, $options);
     }
@@ -329,7 +329,7 @@ class Resolver extends Di
         return $this->get('engine')->create($view_file, $response)->render();
     }
 
-    public function loadModuleController($module, $view = '', &$options = [])
+    public function loadModuleController($module, $view = '', $options = [])
     {
         $module    = $this->sanitize($module, 'module');
         $signature = 'mod'.$module;
@@ -390,7 +390,7 @@ class Resolver extends Di
      * @param string            $module_name
      * @param string (optional) $view        (load file if any view type files)
      **/
-    public function module($option, $view = '', &$options = [], $iscustom = true)
+    public function module($option, $view = '', $options = [], $iscustom = true)
     {
         if (empty($option)) {
             return;

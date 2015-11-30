@@ -186,8 +186,8 @@ class User extends Di
     private function mayBeSerialize($data)
     {
         if (is_array($data) || is_object($data)) {
-            array_walk_recursive($data, function (&$value) {
-                $value = trim($value);
+            array_walk_recursive($data, function ($value) {
+                return trim($value);
             });
 
             return json_encode($data);
@@ -198,7 +198,7 @@ class User extends Di
 
     public function isSerialized($var)
     {
-        $check = @json_decode($var);
+        $check = json_decode($var);
 
         return ($check == null || $check == false) ? false : true;
     }

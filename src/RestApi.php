@@ -111,11 +111,11 @@ class RestApi extends Api
         return $this->outputFormat($status, $data);
     }
 
-    private function outputFormat($status = [], &$output = [])
+    private function outputFormat($status = [], $output = [])
     {
         // there is no status messages other than 200
         if (!empty($status)) {
-            $key               = @array_keys($status);
+            $key               = array_keys($status);
             $output['status']  = $key[0];
             $output['message'] = $status[$key[0]];
         }
@@ -267,7 +267,7 @@ class RestApi extends Api
      *
      * @return mixed
      */
-    public function output(&$output)
+    public function output($output = null)
     {
         $outputType = $this->request['format'];
         $name       = ($this->request['view']) ? $this->request['view'] : $this->request['option'];
@@ -361,11 +361,11 @@ class RestApi extends Api
                 }
             }
 
-            Registry::set('api_key', $status['data']['api_key']);
-            Registry::set('user', $status['data']['user']);
-            Registry::set('userid', $status['data']['userid']);
-            Registry::set('is_user_logged_in', true);
-            Registry::set('is_api_request', true);
+            $this->set('api_key', $status['data']['api_key']);
+            $this->set('user', $status['data']['user']);
+            $this->set('userid', $status['data']['userid']);
+            $this->set('is_user_logged_in', true);
+            $this->set('is_api_request', true);
 
             $sets = $status['data']['set'];
             if (is_array($sets)) {
@@ -516,7 +516,7 @@ class RestApi extends Api
     {
         $str = '';
 
-        @ksort($this->params);
+        ksort($this->params);
         // Note: make sure that the signature parameter is not already included in $params
         foreach ($this->params as $k => $v) {
             $str .= $k.$v;

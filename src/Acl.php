@@ -243,7 +243,7 @@ class Acl extends Di
         return true;
     }
 
-    public function checkUserByLogin(&$data, $conditions = [], $exists = false)
+    public function checkUserByLogin($data = [], $conditions = [], $exists = false)
     {
         $fields = $this->getLoginFields();
         if ($exists) {
@@ -323,12 +323,11 @@ class Acl extends Di
     {
         //call the hooks
         $this->eventManager()->dispatch('event.members.before.logout');
-
-        @setcookie(COOKIE_NAME, '', time() - COOKIE_TIME, COOKIE_PATH);
-        @setcookie(COOKIE_KEY, '', time() - COOKIE_TIME, COOKIE_PATH);
-        @setcookie(COOKIE_UID, '', time() - COOKIE_TIME, COOKIE_PATH);
-
         $this->get('session')->clear();
+
+        setcookie(COOKIE_NAME, '', time() - COOKIE_TIME, COOKIE_PATH);
+        setcookie(COOKIE_KEY, '', time() - COOKIE_TIME, COOKIE_PATH);
+        setcookie(COOKIE_UID, '', time() - COOKIE_TIME, COOKIE_PATH);
 
         return true;
     }
@@ -927,7 +926,7 @@ class Acl extends Di
         return $return;
     }
 
-    public function isPermitted($component = 'home', $view = '', $task = '', &$permissions = [], $mixed = false)
+    public function isPermitted($component = 'home', $view = '', $task = '', $permissions = [], $mixed = false)
     {
         $component = str_replace('com_', '', $component);
 
