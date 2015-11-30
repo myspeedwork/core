@@ -11,10 +11,6 @@
 
 namespace Speedwork\Core;
 
-use Cake\Event\Event;
-use Cake\Event\EventManagerTrait;
-use Speedwork\Config\Configure;
-
 /**
  * @author sankar <sankar.suda@gmail.com>
  */
@@ -26,7 +22,7 @@ class Acl extends Di
 
     public function getLoginFields()
     {
-        $fields = Configure::read('members.login_fields');
+        $fields = $this->read('members.login_fields');
         if (empty($fields)) {
             $fields = ['username'];
         }
@@ -154,11 +150,10 @@ class Acl extends Di
     public function logUserIn($username, $password, $remember = false, $hash = true)
     {
         //call the Event
-        $event = new Event('event.members.before.login', $this, [
+        $event = $this->dispatch('event.members.before.login', [
             'username' => $username,
             'passowrd' => $password,
         ]);
-        $this->eventManager()->dispatch($event);
 
         if ($event->isStopped()) {
             if (isset($event->result)) {
@@ -176,7 +171,7 @@ class Acl extends Di
             ]
         );
 
-        $event = new Event('event.members.login.failed', null, [
+        $event = $this->event('event.members.login.failed', [
             'username' => $username,
             'passowrd' => $password,
         ]);
@@ -232,13 +227,12 @@ class Acl extends Di
 
         $row['plain_password'] = $password;
         //call the Event
-        $event = new Event('event.members.after.login', $this, [
+        $this->dispatch('event.members.after.login', [
             'userid'         => $userid,
             'username'       => $username,
             'plain_password' => $password,
             'user'           => $row,
         ]);
-        $this->eventManager()->dispatch($event);
 
         return true;
     }
@@ -256,7 +250,7 @@ class Acl extends Di
             $fields = $newFields;
         }
 
-        $patterns = Configure::read('members.login_filters');
+        $patterns = $this->read('members.login_filters');
         if (!is_array($patterns)) {
             $patterns = [];
         }
@@ -322,7 +316,7 @@ class Acl extends Di
     public function logout()
     {
         //call the hooks
-        $this->eventManager()->dispatch('event.members.before.logout');
+        $this->dispatch('event.members.before.logout');
         $this->get('session')->clear();
 
         setcookie(COOKIE_NAME, '', time() - COOKIE_TIME, COOKIE_PATH);
@@ -376,11 +370,10 @@ class Acl extends Di
         }
 
         //call the Event
-        $event = new Event('event.members.update.password', $this, [
+        $this->dispatch('event.members.update.password', [
             'userid'   => $userid,
             'passowrd' => $new_password,
         ]);
-        $this->eventManager()->dispatch($event);
 
         return $this->database->update('#__users', [
             'password' => $new_password, 'last_pw_change' => time(),
@@ -597,7 +590,7 @@ class Acl extends Di
             return [];
         }
 
-        if (Configure::read('use_power')) {
+        if ($this->read('use_power')) {
             $power = $this->userGroups($userid);
 
             $rows = $this->database->find('#__user_groups', 'all', [
@@ -653,7 +646,7 @@ class Acl extends Di
      **/
     public function userGroups($userid)
     {
-        if (Configure::read('use_power')) {
+        if ($this->read('use_power')) {
             if ($userid == $this->userid) {
                 $power = $this->get('power');
 
@@ -752,7 +745,7 @@ class Acl extends Di
             'admin_members:activate:*',
         ];
 
-        $default = Configure::read('public_permissions');
+        $default = $this->read('public_permissions');
         if (!is_array($default)) {
             $default = explode('||', $default);
         }
@@ -809,29 +802,22 @@ class Acl extends Di
 
         $_permissions['group'] = array_merge($_permissions['global'], $_permissions['group']);
 
-        $include = Configure::read('permissions.include');
-        $exclude = Configure::read('permissions.exclude');
+        $permissions = $this->read('permissions');
 
-        if (is_array($include)) {
-            $_permissions['include'] = array_merge($_permissions['include'], $include);
+        $merges = [
+            'include',
+            'exclude',
+            'user_include',
+            'user_exclude',
+        ];
+
+        foreach ($merges as $name) {
+            if (is_array($permissions[$name])) {
+                $_permissions[$name] = array_merge($_permissions[$name], $permissions[$name]);
+            }
         }
 
-        if (is_array($exclude)) {
-            $_permissions['exclude'] = array_merge($_permissions['exclude'], $exclude);
-        }
-
-        $include = Configure::read('permissions.user_include');
-        $exclude = Configure::read('permissions.user_exclude');
-
-        if (is_array($include)) {
-            $_permissions['user_include'] = array_merge($_permissions['user_include'], $include);
-        }
-
-        if (is_array($exclude)) {
-            $_permissions['user_include'] = array_merge($_permissions['user_include'], $exclude);
-        }
-
-        Configure::write('permissions', $_permissions);
+        $this->write('permissions', $_permissions);
 
         unset($permissions);
 
