@@ -14,6 +14,7 @@ namespace Speedwork\Core;
 use Speedwork\Config\Configure;
 use Speedwork\Container\Container;
 use Speedwork\Util\Router;
+use Speedwork\Util\Utility;
 
 /**
  * @author sankar <sankar.suda@gmail>
@@ -109,6 +110,17 @@ class Di
     }
 
     /**
+     * store key value pair in registry.
+     *
+     * @param string $key   name of the variable
+     * @param mixed  $value value to store in registry
+     */
+    public function write($key, $value = null)
+    {
+        return Configure::write($key, $value);
+    }
+
+    /**
      * sets is same as set but it set in registry and theme.
      *
      * @param string $key   name of the variable
@@ -186,5 +198,10 @@ class Di
     public function link($url)
     {
         return Router::link($url);
+    }
+
+    public function toTime($time, $date = false, $format = 'Y-m-d')
+    {
+        return Utility::strtotime($time, $date, $format);
     }
 }

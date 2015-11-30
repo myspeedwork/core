@@ -12,7 +12,6 @@
 namespace Speedwork\Core;
 
 use Exception;
-use Speedwork\Util\Utility;
 
 /**
  * @author sankar <sankar.suda@gmail.com>
@@ -452,10 +451,10 @@ class Resolver extends Di
      **/
     public function modules($position, $count = false)
     {
-        $themeid   = Registry::get('themeid');
-        $option    = Registry::get('option');
-        $view      = Registry::get('view');
-        $logged_in = Registry::get('is_user_logged_in');
+        $themeid   = $this->get('themeid');
+        $option    = $this->get('option');
+        $view      = $this->get('view');
+        $logged_in = $this->get('is_user_logged_in');
 
         if (!$position) {
             return false;
@@ -827,14 +826,14 @@ class Resolver extends Di
 
                 if ($from && $to) {
                     $conditions[] = ['DATE('.$alias.$k.') BETWEEN ? AND ? ' => [
-                        Utility::strtotime($from, true),
-                        Utility::strtotime($to, true),
+                        $this->toTime($from, true),
+                        $this->toTime($to, true),
                         ],
                     ];
                 }
 
                 if ($from && empty($to)) {
-                    $conditions[] = ['DATE('.$alias.$k.')' => Utility::strtotime($from, true)];
+                    $conditions[] = ['DATE('.$alias.$k.')' => $this->toTime($from, true)];
                 }
             }
         }
@@ -855,14 +854,14 @@ class Resolver extends Di
 
                 if ($from && $to) {
                     $conditions[] = ['DATE(FROM_UNIXTIME('.$alias.$k.')) BETWEEN ? AND ? ' => [
-                        Utility::strtotime($from, true),
-                        Utility::strtotime($to, true),
+                        $this->toTime($from, true),
+                        $this->toTime($to, true),
                         ],
                     ];
                 }
 
                 if ($from && empty($to)) {
-                    $conditions[] = ['DATE(FROM_UNIXTIME('.$alias.$k.'))' => Utility::strtotime($from, true)];
+                    $conditions[] = ['DATE(FROM_UNIXTIME('.$alias.$k.'))' => $this->toTime($from, true)];
                 }
             }
         }
@@ -886,11 +885,11 @@ class Resolver extends Di
                 }
 
                 if (!is_numeric($from)) {
-                    $from = Utility::strtotime($from.' 00:00:00');
+                    $from = $this->toTime($from.' 00:00:00');
                 }
 
                 if (!is_numeric($to)) {
-                    $to = Utility::strtotime($to.' 23:59:59');
+                    $to = $this->toTime($to.' 23:59:59');
                 }
 
                 $conditions[] = [($alias.$k).' BETWEEN ? AND ? ' => [$from, $to]];
