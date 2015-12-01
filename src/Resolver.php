@@ -896,6 +896,30 @@ class Resolver extends Di
             }
         }
 
+        $ranges = $data['range'];
+        if (is_array($ranges)) {
+            foreach ($ranges as $k => $date) {
+                if (!is_array($date)) {
+                    $date = explode('-', $date);
+                    $date = [
+                        'from' => $date[0],
+                        'to'   => $date[1],
+                    ];
+                }
+
+                $from = trim($date['from']);
+                $to   = trim($date['to']);
+
+                if ($from && $to) {
+                    $conditions[] = [($alias.$k).' BETWEEN ? AND ? ' => [$from, $to]];
+                }
+
+                if ($from && empty($to)) {
+                    $conditions[] = [($alias.$k) => $from];
+                }
+            }
+        }
+
         return $conditions;
     }
 
