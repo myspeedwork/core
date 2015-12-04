@@ -347,7 +347,7 @@ class RestApi extends Api
 
             $status = $this->get('cache')->remember($cache_key, function () use ($sig) {
                 return $this->validate($sig);
-            }, 'api');
+            }, '+10 MINUTE');
         } else {
             $status = $this->validate($sig);
         }
