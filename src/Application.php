@@ -18,6 +18,12 @@ use Speedwork\Container\Container;
  */
 class Application extends Container
 {
+    public function __construct()
+    {
+        parent::__construct();
+        static::setInstance($this);
+    }
+
     public function run()
     {
         $this->get('template')->render();

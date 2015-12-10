@@ -121,18 +121,22 @@ class Di
     }
 
     /**
-     * sets is same as set but it set in registry and theme.
+     * Helper fuction for configuration read and write.
      *
-     * @param string $key   name of the variable
-     * @param mixed  $value value to store
+     * @param mixed $key     [description]
+     * @param mixed $default [description]
      */
-    public function sets($key, $value)
+    public function config($key = null, $default = null)
     {
-        $this->set($key, $value);
-        $this->assign($key, $value);
-        Registry::set($key, $value);
+        if (is_null($key)) {
+            return $this->get('config');
+        }
 
-        return $this;
+        if (is_array($key)) {
+            return $this->get('config')->set($key);
+        }
+
+        return $this->get('config')->get($key, $default);
     }
 
     public function assign($key, $value)
@@ -145,6 +149,21 @@ class Di
     public function release($key)
     {
         return $this->get('engine')->release($key);
+    }
+
+    /**
+     * sets is same as set but it set in registry and theme.
+     *
+     * @param string $key   name of the variable
+     * @param mixed  $value value to store
+     */
+    public function sets($key, $value)
+    {
+        $this->set($key, $value);
+        $this->assign($key, $value);
+        Registry::set($key, $value);
+
+        return $this;
     }
 
     public function setData($data)
