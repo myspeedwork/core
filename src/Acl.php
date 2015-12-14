@@ -16,13 +16,11 @@ namespace Speedwork\Core;
  */
 class Acl extends Di
 {
-    use EventManagerTrait;
-
     private $permissions = [];
 
     public function getLoginFields()
     {
-        $fields = $this->read('members.login_fields');
+        $fields = $this->config('auth.account.login_fields');
         if (empty($fields)) {
             $fields = ['username'];
         }
@@ -250,7 +248,7 @@ class Acl extends Di
             $fields = $newFields;
         }
 
-        $patterns = $this->read('members.login_filters');
+        $patterns = $this->config('auth.account.login_filters');
         if (!is_array($patterns)) {
             $patterns = [];
         }
@@ -590,51 +588,35 @@ class Acl extends Di
             return [];
         }
 
-        if ($this->read('use_power')) {
+        if ($this->config('auth.power')) {
             $power = $this->userGroups($userid);
 
             $rows = $this->database->find('#__user_groups', 'all', [
                 'conditions' => ['groupid' => $power],
             ]);
         } else {
-            $join   = [];
-            $join[] = [
+            $joins   = [];
+            $joins[] = [
                 'table'      => '#__user_groups',
                 'alias'      => 'gp',
                 'type'       => 'INNER',
-                'conditions' => ['g.fkgroupid = gp.groupid'],
+                'conditions' => ['g.group_id = gp.groupid'],
             ];
 
             $rows = $this->database->find('#__user_to_group', 'all', [
                 'alias'      => 'g',
-                'conditions' => ['g.fkuserid' => $userid],
-                'joins'      => $join,
+                'conditions' => ['g.user_id' => $userid],
+                'joins'      => $joins,
             ]);
         }
 
-        if (count($rows) == 0) {
-            return [];
-        }
-
-        $permission = [
-            'include' => [],
-            'exclude' => [],
-        ];
+        $permissions = ['include' => [], 'exclude' => []];
 
         foreach ($rows as $row) {
-            $permissions = json_decode($row['permissions'], true);
-
-            if (is_array($permissions['include'])) {
-                $permission['include'] = array_merge($permission['include'], $permissions['include']);
-                if (is_array($permissions['exclude'])) {
-                    $permission['exclude'] = array_merge($permission['exclude'], $permissions['exclude']);
-                }
-            } else {
-                $permission['include'] = array_merge($permission['include'], explode('||', $row['permissions']));
-            }
+            $permissions = array_merge($permissions, json_decode($row['permissions'], true));
         }
 
-        return $permission;
+        return $permissions;
     }
 
     /**
@@ -646,11 +628,9 @@ class Acl extends Di
      **/
     public function userGroups($userid)
     {
-        if ($this->read('use_power')) {
+        if ($this->config('auth.power')) {
             if ($userid == $this->userid) {
-                $power = $this->get('power');
-
-                return [$power];
+                return [$this->get('power')];
             }
 
             $row = $this->database->find('#__users', 'first', [
@@ -663,13 +643,13 @@ class Acl extends Di
         }
 
         $rows = $this->database->find('#__user_to_group', 'all', [
-            'conditions' => ['fkuserid' => $userid],
+            'conditions' => ['user_id' => $userid],
             ]
         );
 
         $groups = [];
         foreach ($rows as $row) {
-            $groups[] = $row['groupid'];
+            $groups[] = $row['group_id'];
         }
 
         return $groups;
@@ -689,12 +669,7 @@ class Acl extends Di
             ]
         );
 
-        $permissions = [];
-        if ($row['permissions']) {
-            $permissions = json_decode($row['permissions'], true);
-        }
-
-        return $permissions;
+        return array_merge(['include' => [], 'exclude' => []], (array) json_decode($row['permissions'], true));
     }
 
     /**
@@ -710,25 +685,19 @@ class Acl extends Di
             'conditions' => ['groupid' => $groupid],
         ]);
 
-        $permission = [];
+        $permissions = ['include' => [], 'exclude' => []];
         foreach ($rows as $row) {
-            $permissions = json_decode($rows['permissions'], true);
-            if (is_array($permissions['include'])) {
-                $permission = array_merge($permission, $permissions['include']);
-            } else {
-                $permission = array_merge($permission, explode('||', $row['permissions']));
-            }
+            $permissions = array_merge($permissions, json_decode($row['permissions'], true));
         }
 
-        return $permission;
+        return $permissions;
     }
 
-    public function getPermissions($userid = '')
+    public function getPermissions($userid = null)
     {
         // Every one get these permissions
-        $permissions = [
+        $public = [
             'errors:**',
-            'admin_errors:**',
             'members:logout',
             'members:login',
             'members:auth',
@@ -736,6 +705,8 @@ class Acl extends Di
             'members:resetpass:*',
             'members:pwreset:*',
             'members:activate:*',
+
+            'admin_errors:**',
             'admin_members:logout',
             'admin_members:login',
             'admin_members:auth',
@@ -745,83 +716,32 @@ class Acl extends Di
             'admin_members:activate:*',
         ];
 
-        $default = $this->read('public_permissions');
-        if (!is_array($default)) {
-            $default = explode('||', $default);
-        }
+        $permissions = config('auth.permissions');
 
-        if (!is_array($default['include'])) {
-            $default['include'] = $default;
-            $default['exclude'] = [];
-        }
-
-        if (!is_array($default['exclude'])) {
-            $default['exclude'] = [];
-        }
-
-        if (count($default) > 0) {
-            $permissions = array_merge($permissions, $default['include']);
-        }
-
-        $_permissions                 = [];
-        $_permissions['global']       = $permissions;
-        $_permissions['user_exclude'] = [];
-        $_permissions['user_include'] = [];
-        $_permissions['exclude']      = [];
-        $_permissions['include']      = [];
-        $_permissions['group']        = [];
-
-        if (empty($userid)) {
-            $_permissions['exclude'] = $default['exclude'];
-        }
-
-        if (!empty($userid)) {
-            //userpermissions
-            $permissions = $this->userPermissions($userid);
-
-            if ($permissions && is_array($permissions)) {
-                if (is_array($permissions['exclude'])) {
-                    $_permissions['user_exclude'] = array_merge($_permissions['user_exclude'], $permissions['exclude']);
+        foreach (['public', 'user', 'group'] as $value) {
+            if (is_array($permissions[$value])) {
+                if (!is_array($permissions[$value]['exclude'])) {
+                    $permissions[$value]['exclude'] = [];
                 }
-                if (is_array($permissions['include'])) {
-                    $_permissions['user_include'] = array_merge($_permissions['user_include'], $permissions['include']);
-                }
-            }
 
-            //group premissions
-            $permissions = $this->userGroupPermissions($userid);
-            if ($permissions && is_array($permissions)) {
-                if (is_array($permissions['exclude'])) {
-                    $_permissions['exclude'] = array_merge($_permissions['exclude'], $permissions['exclude']);
+                if (!is_array($permissions[$value]['include'])) {
+                    $permissions[$value]['include'] = [];
                 }
-                if (is_array($permissions['include'])) {
-                    $_permissions['group'] = array_merge($_permissions['include'], $permissions['include']);
-                }
+            } else {
+                $permissions[$value] = ['include' => [], 'exclude' => []];
             }
         }
 
-        $_permissions['group'] = array_merge($_permissions['global'], $_permissions['group']);
+        $permissions['public']['include'] = array_merge($permissions['public']['include'], $public);
 
-        $permissions = $this->read('permissions');
-
-        $merges = [
-            'include',
-            'exclude',
-            'user_include',
-            'user_exclude',
-        ];
-
-        foreach ($merges as $name) {
-            if (is_array($permissions[$name])) {
-                $_permissions[$name] = array_merge($_permissions[$name], $permissions[$name]);
-            }
+        if ($userid) {
+            $permissions['user']  = array_merge($permissions['user'], $this->userPermissions($userid));
+            $permissions['group'] = array_merge($permissions['group'], $this->userGroupPermissions($userid));
         }
 
-        $this->write('permissions', $_permissions);
+        config(['auth.permissions' => $permissions]);
 
-        unset($permissions);
-
-        return $_permissions;
+        return $permissions;
     }
 
     /**
@@ -832,7 +752,7 @@ class Acl extends Di
      **/
     public function isAllowed($component = 'home', $view = '', $task = '', $userid = null)
     {
-        $userid = ($userid) ? $userid : $this->userid;
+        $userid = ($userid) ? $userid : $this->get('userid');
 
         if (empty($component)) {
             $component = 'home';
@@ -842,125 +762,103 @@ class Acl extends Di
             $this->permissions[$userid] = $this->getPermissions($userid);
         }
 
-        $_permissions = $this->permissions[$userid];
+        $component = config('auth.firewall').$component;
 
-        $prefix   = '';
-        $firewall = $this->get('firewall');
+        $permissions = $this->permissions[$userid];
 
-        if ($firewall) {
-            $prefix = 'admin_';
-        }
-
-        $component = $prefix.$component;
-        $return    = false;
-
-        // get group permissions
-        $permissions = $_permissions['group'];
-        if ($permissions && is_array($permissions)) {
-            $return = $this->isPermitted($component, $view, $task, $permissions);
-        }
-
-        // get include permissions
-        $permissions = $_permissions['include'];
-        if (!$return && $permissions && is_array($permissions)) {
-            if ($this->isPermitted($component, $view, $task, $permissions)) {
-                $return = true;
-            }
-        }
-
-        // get exclude permissions
-        $permissions = $_permissions['exclude'];
-        if ($return && $permissions && is_array($permissions)) {
-            if ($this->isPermitted($component, $view, $task, $permissions)) {
-                $return = false;
-            }
-        }
-
-        // get user exclude permissions
-        $permissions = $_permissions['user_exclude'];
-        if ($return && $permissions && is_array($permissions)) {
-            if ($this->isPermitted($component, $view, $task, $permissions)) {
-                $return = false;
-            }
-        }
-
-        // get user include permissions
-        $permissions = $_permissions['user_include'];
-        if (!$return && $permissions && is_array($permissions)) {
-            if ($this->isPermitted($component, $view, $task, $permissions)) {
-                $return = true;
-            }
-        }
-
-        $permissions = $_permissions['mixed'];
-        if ($permissions && is_array($permissions)) {
-            $perms = [];
-            foreach ($permissions as $value) {
-                if (is_array($value)) {
-                    $perms = array_merge($perms, $value);
-                } else {
-                    $perms[] = $value;
+        //Exclude has more priority than include
+        $perms = $permissions['user'];
+        if ($perms && is_array($perms)) {
+            if (is_array($perms['exclude'])) {
+                if ($this->isPermitted($component, $view, $task, $perms['exclude'])) {
+                    return false;
                 }
             }
 
-            $returns = $this->isPermitted($component, $view, $task, $perms, true);
-            $return  = (is_bool($returns)) ? $returns : $return;
+            if (is_array($perms['include'])) {
+                if ($this->isPermitted($component, $view, $task, $perms['include'])) {
+                    return true;
+                }
+            }
         }
 
-        unset($permissions, $perms);
+        $perms = $permissions['group'];
+        if ($perms && is_array($perms)) {
+            if (is_array($perms['exclude'])) {
+                if ($this->isPermitted($component, $view, $task, $perms['exclude'])) {
+                    return false;
+                }
+            }
 
-        return $return;
+            if (is_array($perms['include'])) {
+                if ($this->isPermitted($component, $view, $task, $perms['include'])) {
+                    return true;
+                }
+            }
+        }
+
+        $perms = $permissions['public'];
+        if ($perms && is_array($perms)) {
+            if (is_array($perms['exclude'])) {
+                if ($this->isPermitted($component, $view, $task, $perms['exclude'])) {
+                    return false;
+                }
+            }
+
+            if (is_array($perms['include'])) {
+                if ($this->isPermitted($component, $view, $task, $perms['include'])) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
-    public function isPermitted($component = 'home', $view = '', $task = '', $permissions = [], $mixed = false)
+    public function isPermitted($component = 'home', $view = '', $task = '', $permissions = [])
     {
         $component = str_replace('com_', '', $component);
 
-        $return = false;
         foreach ($permissions as $permission) {
             $permission = trim($permission);
-            $return     = substr($permission, 0, 1) == '-' ? false : true;
-            $permission = str_replace(['-','+'], '', $permission);
 
             if ($permission == '*' &&  $component != 'home' && $component != 'admin_home') {
-                return $return; // Super Admin Bypass found
+                return true; // Super Admin Bypass found
             }
 
             if ($permission == $component.':**') {
-                return $return; // Component Wide Bypass with tasks
+                return true; // Component Wide Bypass with tasks
             }
 
             if (!$task && $permission == $component.':*') {
-                return $return; // Component Wide Bypass without tasks found
+                return true; // Component Wide Bypass without tasks found
             }
 
             if (!$view && !$task && $permission == $component.':') {
-                return $return; // Component Wide Bypass found
+                return true; // Component Wide Bypass found
             }
 
             if (!$task && $permission == $component.':'.$view) {
-                return $return; // Specific view without any task like view
+                return true; // Specific view without any task like view
             }
 
             if ($task && $permission == $component.':'.$view.':'.$task) {
-                return $return; // Specific view with perticular task found
+                return true; // Specific view with perticular task found
             }
 
             if ($task && $permission == $component.':*:'.$task) {
-                return $return; // Any view with perticular task found
+                return true; // Any view with perticular task found
             }
 
             if ($task && $permission == $component.':*:*') {
-                return $return; // Any view and task
+                return true; // Any view and task
             }
 
             if ($permission == $component.':'.$view.':*') {
-                return $return; // Specific view with all tasks permission found
+                return true; // Specific view with all tasks permission found
             }
         }
 
-        if (!$mixed) {
-            return false;
-        }
+        return false;
     }
 }

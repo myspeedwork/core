@@ -11,7 +11,6 @@
 
 namespace Speedwork\Core;
 
-use Speedwork\Config\Configure;
 use Speedwork\Container\Container;
 use Speedwork\Util\Router;
 use Speedwork\Util\Utility;
@@ -21,7 +20,7 @@ use Speedwork\Util\Utility;
  */
 class Di
 {
-    //use EventManagerTrait;
+    use EventManagerTrait;
 
     protected $post   = [];
     protected $get    = [];
@@ -96,28 +95,6 @@ class Di
         $this->di->set($key, $value);
 
         return $this;
-    }
-
-    /**
-     * store key value pair in registry.
-     *
-     * @param string $key   name of the variable
-     * @param mixed  $value value to store in registry
-     */
-    public function read($key)
-    {
-        return Configure::read($key);
-    }
-
-    /**
-     * store key value pair in registry.
-     *
-     * @param string $key   name of the variable
-     * @param mixed  $value value to store in registry
-     */
-    public function write($key, $value = null)
-    {
-        return Configure::write($key, $value);
     }
 
     /**
