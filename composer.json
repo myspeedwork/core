@@ -15,6 +15,9 @@
         "speedwork/util" : "dev-master"
     },
     "autoload" : {
+        "files": [
+            "src/functions.php"
+        ],
         "psr-4": { "Speedwork\\Core\\": "src" }
     },
     "minimum-stability": "dev"

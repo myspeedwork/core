@@ -53,10 +53,10 @@ class Resolver extends Di
         $option = strtolower($option);
 
         if ($type == 'module') {
-            return str_replace('mod_', '', $option);
+            return $option;
         }
 
-        return str_replace('com_', '', $option);
+        return $option;
     }
 
     protected function setPath($path)
@@ -75,7 +75,7 @@ class Resolver extends Di
 
     protected function getPath($option, $type = 'component')
     {
-        $option = str_replace(['com_', 'mod_'], '', strtolower($option));
+        $option = strtolower($option);
         $path   = _APP;
         $url    = __APP_URL;
         if ($this->system[$type][$option]) {
@@ -113,7 +113,7 @@ class Resolver extends Di
                 throw new \Exception('Controller '.$option.' not found', 1);
             }
 
-            $class = 'Components\\'.$name.'\\'.$class_name;
+            $class = 'System\\Components\\'.$name.'\\'.$class_name;
 
             require_once $file;
 
@@ -183,7 +183,7 @@ class Resolver extends Di
                 throw new \Exception('Model '.$option.' not found');
             }
 
-            $class = 'Components\\'.$name.'\\'.$class_name;
+            $class = 'System\\Components\\'.$name.'\\'.$class_name;
 
             require_once $file;
 
@@ -238,7 +238,7 @@ class Resolver extends Di
 
     public function loadView($component, $view = '', $type = 'component')
     {
-        $view_file = $this->findView($component.'.'.$view, $type);
+        $view_file = $this->findView(trim($component.'.'.$view, '.'), $type);
         if (empty($view_file)) {
             return;
         }
@@ -248,7 +248,7 @@ class Resolver extends Di
 
     public function requestLayout($component, $view = '', $type = 'component')
     {
-        $view_file = $this->findView($component.'.'.$view, $type);
+        $view_file = $this->findView(trim($component.'.'.$view, '.'), $type);
         if (empty($view_file)) {
             return $this->findView('errors');
         }
@@ -274,7 +274,7 @@ class Resolver extends Di
                 return ['A400' => 'Api Not Implemented'];
             }
 
-            $class = 'Components\\'.$name.'\\'.$class_name;
+            $class = 'System\\Components\\'.$name.'\\'.$class_name;
 
             if (!class_exists($class)) {
                 include $model_file;
@@ -323,7 +323,7 @@ class Resolver extends Di
             $response = [];
         }
 
-        $view_file = $this->findView($option.'.'.$view, 'component');
+        $view_file = $this->findView(trim($option.'.'.$view, '.'), 'component');
 
         return $this->get('engine')->create($view_file, $response)->render();
     }
@@ -348,7 +348,7 @@ class Resolver extends Di
                 throw new Exception($module.' not found');
             }
 
-            $class = 'Modules\\'.$name.'\\'.$class_name;
+            $class = 'System\\Modules\\'.$name.'\\'.$class_name;
 
             require_once $file;
 
@@ -421,7 +421,7 @@ class Resolver extends Di
             $response = [];
         }
 
-        $view_file = $this->findView($option.'.'.$view, 'module');
+        $view_file = $this->findView(trim($option.'.'.$view, '.'), 'module');
 
         echo $this->get('engine')->create($view_file, $response)->render();
     }
@@ -577,7 +577,7 @@ class Resolver extends Di
 
             $paths[] = [
                 'file'  => $dir.'components'.DS.$component.DS.'helpers'.DS.(($group) ? $group.DS : '').$helperClass.'.php',
-                'class' => 'Components\\'.ucfirst($component).'\\Helpers\\'.$helperClass,
+                'class' => 'System\\Components\\'.ucfirst($component).'\\Helpers\\'.$helperClass,
             ];
         } else {
             $paths[] = [
@@ -648,7 +648,7 @@ class Resolver extends Di
 
                 $paths[] = [
                     'file'  => $dir.'components'.DS.$component.DS.'widgets'.DS.$widget.DS.$widgetClass.'.php',
-                    'class' => 'Components\\'.ucfirst($component).'\\Widgets\\'.$widgetClass,
+                    'class' => 'System\\Components\\'.ucfirst($component).'\\Widgets\\'.$widgetClass,
                     'url'   => $url.'components/'.$component.'/widgets/'.$widget.'/assets/',
                 ];
             } else {

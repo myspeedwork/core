@@ -108,7 +108,7 @@ trait ResolverTrait
         $ajax['start'] = $start.$mid;
         $ajax['end']   = $end;
 
-        $class           = 'render-'.rand();
+        $class           = 'render-'.uniqid();
         $params['class'] = '.'.$class;
 
         $start          = '<form role="render" class="'.$class.'" method="'.$method.'" action="'.$url.'">';
