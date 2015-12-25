@@ -11,6 +11,7 @@
 
 namespace Speedwork\Core;
 
+use Closure;
 use Exception;
 
 /**
@@ -46,17 +47,13 @@ class Resolver extends Di
                 $this->system['module'] = array_merge($this->system['module'], $system['module']);
             }
         }
+
+        return $this;
     }
 
-    protected function sanitize($option, $type = 'component')
+    protected function sanitize($option)
     {
-        $option = strtolower($option);
-
-        if ($type == 'module') {
-            return $option;
-        }
-
-        return $option;
+        return strtolower($option);
     }
 
     protected function setPath($path)
@@ -76,16 +73,27 @@ class Resolver extends Di
     protected function getPath($option, $type = 'component')
     {
         $option = strtolower($option);
-        $path   = _APP;
-        $url    = __APP_URL;
-        if ($this->system[$type][$option]) {
-            $path = _SYS;
-            $url  = __SYSURL;
+        $system = $this->system[$type][$option];
+
+        if ($system) {
+            if (is_array($system)) {
+                return array_merge([
+                    'url'  => __APP_URL,
+                    'path' => null,
+                ], $system);
+            }
+
+            return [
+                'url'       => __SYSURL,
+                'path'      => _SYS,
+                'namespace' => null,
+            ];
         }
 
         return [
-            'url'  => $url,
-            'path' => $path,
+            'url'       => __APP_URL,
+            'path'      => _APP,
+            'namespace' => null,
         ];
     }
 
@@ -99,23 +107,28 @@ class Resolver extends Di
         $signature = 'controller'.$option;
 
         if (!$this->has($signature)) {
-            $name       = ucfirst($option);
             $class_name = 'Controller';
 
-            $url  = $this->getPath($option);
-            $path = $url['path'];
-            $url  = $url['url'];
+            $url       = $this->getPath($option);
+            $path      = $url['path'];
+            $namespace = $url['namespace'] ?: 'System\\Components\\';
+            $url       = $url['url'];
 
-            //include Controller
-            $file = $path.'components'.DS.$option.DS.$class_name.'.php';
+            if (!empty($path)) {
+                $file = $path.'components'.DS.$option.DS.$class_name.'.php';
 
-            if (!file_exists($file)) {
-                throw new \Exception('Controller '.$option.' not found', 1);
+                if (!file_exists($file)) {
+                    throw new \Exception('Controller '.$option.' not found', 1);
+                }
+
+                require_once $file;
             }
 
-            $class = 'System\\Components\\'.$name.'\\'.$class_name;
+            $class = $namespace.ucfirst($option).'\\'.$class_name;
 
-            require_once $file;
+            if (!class_exists($class)) {
+                throw new \Exception('Controller '.$option.' not found', 1);
+            }
 
             $controller = new $class();
             $controller->setContainer($this->di);
@@ -164,28 +177,35 @@ class Resolver extends Di
         return $response;
     }
 
-    public function loadModel($option)
+    protected function loadModel($option)
     {
         $option = $this->sanitize($option);
 
         $signature = 'model'.$option;
 
         if (!$this->has($signature)) {
-            $url  = $this->getPath($option);
-            $path = $url['path'];
-
-            $name       = ucfirst($option);
             $class_name = 'Model';
 
-            $file = $path.'components'.DS.$option.DS.$class_name.'.php';
+            $url       = $this->getPath($option);
+            $path      = $url['path'];
+            $namespace = $url['namespace'] ?: 'System\\Components\\';
+            $url       = $url['url'];
 
-            if (!file_exists($file)) {
-                throw new \Exception('Model '.$option.' not found');
+            if (!empty($path)) {
+                $file = $path.'components'.DS.$option.DS.$class_name.'.php';
+
+                if (!file_exists($file)) {
+                    throw new \Exception('Model '.$option.' not found', 1);
+                }
+
+                require_once $file;
             }
 
-            $class = 'System\\Components\\'.$name.'\\'.$class_name;
+            $class = $namespace.ucfirst($option).'\\'.$class_name;
 
-            require_once $file;
+            if (!class_exists($class)) {
+                throw new \Exception('Model '.$option.' not found', 1);
+            }
 
             $model = new $class();
             $model->setContainer($this->di);
@@ -209,9 +229,9 @@ class Resolver extends Di
         $option = explode('.', $option, 2);
         $view   = $option[1];
         $option = $option[0];
+        $option = $this->sanitize($option);
 
         $type   = (empty($type)) ? 'component' : $type;
-        $option = $this->sanitize($option, $type);
         $folder = ($type == 'component') ? 'components' : 'modules';
 
         $url  = $this->getPath($option, $type);
@@ -219,7 +239,8 @@ class Resolver extends Di
 
         $view = explode('.', strtolower(trim($view)));
 
-        $extensions = ['.tpl'];
+        $extensions = config('theme.engines');
+        $extensions = (!empty($extensions)) ? $extensions : ['.tpl'];
 
         $views   = [];
         $views[] = _TMP_PATH.$folder.DS.$option.DS.((!empty($view[0])) ? implode(DS, $view) : 'index');
@@ -256,28 +277,33 @@ class Resolver extends Di
         return $view_file;
     }
 
-    public function requestApi($component)
+    public function requestApi($option)
     {
-        $component = $this->sanitize($component);
-        $signature = 'api'.$component;
+        $option    = $this->sanitize($option);
+        $signature = 'api'.$option;
 
         if (!$this->has($signature)) {
-            $url  = $this->getPath($component);
-            $path = $url['path'];
-
-            $name       = ucfirst($component);
             $class_name = 'Api';
 
-            $model_file = $path.'components'.DS.$component.DS.$class_name.'.php';
+            $url       = $this->getPath($option);
+            $path      = $url['path'];
+            $namespace = $url['namespace'] ?: 'System\\Components\\';
+            $url       = $url['url'];
 
-            if (!file_exists($model_file)) {
-                return ['A400' => 'Api Not Implemented'];
+            if (!empty($path)) {
+                $file = $path.'components'.DS.$option.DS.$class_name.'.php';
+
+                if (!file_exists($file)) {
+                    return ['A400' => 'Api Not Implemented'];
+                }
+
+                require_once $file;
             }
 
-            $class = 'System\\Components\\'.$name.'\\'.$class_name;
+            $class = $namespace.ucfirst($option).'\\'.$class_name;
 
             if (!class_exists($class)) {
-                include $model_file;
+                return ['A400' => 'Api Not Implemented'];
             }
 
             try {
@@ -328,34 +354,39 @@ class Resolver extends Di
         return $this->get('engine')->create($view_file, $response)->render();
     }
 
-    public function loadModuleController($module, $view = '', $options = [])
+    public function loadModuleController($option, $view = '', $options = [])
     {
-        $module    = $this->sanitize($module, 'module');
-        $signature = 'mod'.$module;
+        $option    = $this->sanitize($option);
+        $signature = 'mod'.$option;
 
         if (!$this->has($signature)) {
-            $url  = $this->getPath($module, 'module');
-            $path = $url['path'];
-            $url  = $url['url'];
-
-            $name       = ucfirst($module);
             $class_name = 'Module';
 
-            //include Controller
-            $file = $path.'modules'.DS.$module.DS.$class_name.'.php';
+            $url       = $this->getPath($option, 'module');
+            $path      = $url['path'];
+            $namespace = $url['namespace'] ?: 'System\\Modules\\';
+            $url       = $url['url'];
 
-            if (!file_exists($file)) {
-                throw new Exception($module.' not found');
+            if (!empty($path)) {
+                $file = $path.'modules'.DS.$option.DS.$class_name.'.php';
+
+                if (!file_exists($file)) {
+                    throw new \Exception('Module '.$option.' not found', 1);
+                }
+
+                require_once $file;
             }
 
-            $class = 'System\\Modules\\'.$name.'\\'.$class_name;
+            $class = $namespace.ucfirst($option).'\\'.$class_name;
 
-            require_once $file;
+            if (!class_exists($class)) {
+                throw new \Exception('Module '.$option.' not found', 1);
+            }
 
             $instance = new $class();
             $instance->setContainer($this->di);
 
-            $assets = $url.'modules/'.$module.'/assets/';
+            $assets = $url.'modules/'.$option.'/assets/';
             $this->set($signature, $instance);
             $this->set($signature.'.assets', $assets);
         } else {
@@ -552,13 +583,18 @@ class Resolver extends Di
      **/
     public function helper($helperName)
     {
+        if (!is_string($helperName)
+            && $helperName instanceof Closure) {
+            return $helperName($this->di);
+        }
+
         $signature = 'helper'.strtolower($helperName);
 
         if ($this->has($signature)) {
             return $this->get($signature);
         }
 
-        $helperName = explode('.', $helperName);
+        $helperName = explode('.', $helperName, 2);
         $component  = $helperName[1];
 
         $component = explode(':', $component);
@@ -926,7 +962,10 @@ class Resolver extends Di
     public function ordering(&$data = [], $ordering = [])
     {
         if ($data['sort']) {
-            $ordering = [$data['sort'].' '.$data['order']];
+            if (empty($data['order'])) {
+                $data['sort'] = implode(' ', explode('|', $data['sort'], 2));
+            }
+            $ordering = [trim($data['sort'].' '.$data['order'])];
         }
 
         return $ordering;

@@ -18,12 +18,12 @@ trait ResolverTrait
 {
     public function controller($component, $options = [])
     {
-        return $this->get('resolver')->loadController($component, '', $options, 2);
+        return $this->get('resolver')->requestController($component, $options);
     }
 
     public function model($component)
     {
-        return $this->get('resolver')->loadModel($component);
+        return $this->get('resolver')->requestModel($component);
     }
 
     public function action($option, &$options = [])
