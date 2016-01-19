@@ -219,7 +219,7 @@ class Acl extends Di
 
         $this->database->update('#__users', [
             'last_signin' => time(),
-            'ip'          => $this->server['REMOTE_ADDR'],
+            'ip'          => env('REMOTE_ADDR'),
             ], ['userid' => $userid]
         );
 

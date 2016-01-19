@@ -239,17 +239,17 @@ class Resolver extends Di
 
         $view = explode('.', strtolower(trim($view)));
 
-        $extensions = config('theme.engines');
-        $extensions = (!empty($extensions)) ? $extensions : ['.tpl'];
+        $engines = config('theme.engines');
+        $engines = $engines ?: ['tpl'];
 
         $views   = [];
         $views[] = _TMP_PATH.$folder.DS.$option.DS.((!empty($view[0])) ? implode(DS, $view) : 'index');
         $views[] = $path.$folder.DS.$option.DS.'views'.DS.((!empty($view[0])) ? implode(DS, $view) : 'index');
 
         foreach ($views as $file) {
-            foreach ($extensions as $ext) {
-                if (file_exists($file.$ext)) {
-                    return $file.$ext;
+            foreach ($engines as $engine) {
+                if (file_exists($file.'.'.$engine)) {
+                    return $file.'.'.$engine;
                 }
             }
         }

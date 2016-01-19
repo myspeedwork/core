@@ -11,18 +11,17 @@
 
 namespace Speedwork\Core;
 
-use Cake\Cache\Cache;
 use Speedwork\Util\RestUtils;
 use Speedwork\Util\Xml;
 
 class RestApi extends Api
 {
-    private $cache    = false;
+    private $cache    = null;
     private $useronly = false;
     private $public   = [];
     private $request  = [];
 
-    public function setCache($cache = false)
+    public function setCache($cache = '+10 MINUTE')
     {
         $this->cache = $cache;
 
@@ -31,15 +30,10 @@ class RestApi extends Api
 
     public function setRequest($request)
     {
-        if (empty($request['api_key'])) {
-            $request['api_key'] = $this->server['api_key'];
-        }
-
-        if (empty($request['format'])) {
-            $request['format'] = $request['output'];
-        }
-
-        $request['format'] = strtolower($request['format']);
+        $request['api_key'] = $request['api_key'] ?: env('HTTP_API_KEY');
+        $request['format']  = $request['format'] ?: $request['output'];
+        $request['format']  = $request['format'] ?: env('HTTP_API_FORMAT');
+        $request['method']  = $request['method'] ?: env('HTTP_API_METHOD');
 
         // Method is combination of option and view separated by . (dot)
         $method = explode('.', strtolower($request['method']));
@@ -105,7 +99,7 @@ class RestApi extends Api
                 $status = $sig;
             }
         } else {
-            $status['A401B'] = 'Method Not Found';
+            $status['A401B'] = trans('Method Not Found');
         }
 
         return $this->outputFormat($status, $data);
@@ -160,7 +154,7 @@ class RestApi extends Api
 
             $data = $controller->$method();
         } else {
-            $status['A401A'] = 'Method Not Implemented';
+            $status['A401A'] = trans('Method Not Implemented');
         }
 
         return $this->outputFormat($status, $data);
@@ -177,7 +171,7 @@ class RestApi extends Api
         try {
             $controller = $this->get('resolver')->requestController($option);
         } catch (\Exception $e) {
-            $status['A400'] = 'Api Not Implemented';
+            $status['A400'] = trans('Api Not Implemented');
 
             return $this->outputFormat($status, $data);
         }
@@ -185,7 +179,7 @@ class RestApi extends Api
         $method = ($view) ? $view : 'index';
 
         if (!method_exists($controller, $method)) {
-            $status['A401A'] = 'Method Not Implemented';
+            $status['A401A'] = trans('Method Not Implemented');
 
             return $this->outputFormat($status, $data);
         }
@@ -198,7 +192,7 @@ class RestApi extends Api
         unset($response['api']);
 
         if ($api === false) {
-            $status['A401A'] = 'Method Not Allowed';
+            $status['A401A'] = trans('Method Not Allowed');
 
             return $this->outputFormat($status, $data);
         }
@@ -269,7 +263,7 @@ class RestApi extends Api
      */
     public function output($output = null)
     {
-        $outputType = $this->request['format'];
+        $outputType = strtolower($this->request['format']);
         $name       = ($this->request['view']) ? $this->request['view'] : $this->request['option'];
 
         $this->setRequest([]);
@@ -339,7 +333,7 @@ class RestApi extends Api
 
         $api_key = $this->request['api_key'];
         if (!$api_key) {
-            return ['A402' => 'Api Key not found'];
+            return ['A402' => trans('Api Key not found')];
         }
 
         if ($this->cache) {
@@ -347,7 +341,7 @@ class RestApi extends Api
 
             $status = $this->get('cache')->remember($cache_key, function () use ($sig) {
                 return $this->validate($sig);
-            }, '+10 MINUTE');
+            }, $this->cache);
         } else {
             $status = $this->validate($sig);
         }
@@ -357,7 +351,7 @@ class RestApi extends Api
                 $signature = $this->generateSignature($status['api_secret']);
 
                 if (strcmp($this->request['api_sig'], $signature) != 0) {
-                    return ['A408' => 'Api Signature not equal'];
+                    return ['A408' => trans('Api Signature not equal')];
                 }
             }
 
@@ -365,12 +359,11 @@ class RestApi extends Api
             $this->set('user', $status['data']['user']);
             $this->set('userid', $status['data']['userid']);
             $this->set('is_user_logged_in', true);
-            $this->set('is_api_request', true);
 
             $sets = $status['data']['set'];
             if (is_array($sets)) {
                 foreach ($sets as $key => $value) {
-                    Registry::set($key, $value);
+                    $this->set($key, $value);
                 }
             }
 
@@ -396,27 +389,27 @@ class RestApi extends Api
     {
         $api_key = $this->request['api_key'];
         if (!$api_key) {
-            return ['A402' => 'Api Key not found'];
+            return ['A402' => trans('Api Key not found')];
         }
 
         if ($sig) {
             $api_sig = $this->request['api_sig'];
 
             if (!$api_sig) {
-                return ['A403' => 'Api Signature not found'];
+                return ['A403' => trans('Api Signature not found')];
             }
         }
 
         $secret = $this->getSecret($api_key);
 
         if ($secret === false) {
-            return ['A404' => 'Your api account got suspended'];
+            return ['A404' => trans('Your api account got suspended')];
         }
 
         $secret['api_key'] = $api_key;
 
         if ($sig && !$secret['api_secret']) {
-            return ['A405' => 'Api secret not found'];
+            return ['A405' => trans('Api secret not found')];
         }
 
         if ($secret['allowed_ip']) {
@@ -428,20 +421,20 @@ class RestApi extends Api
             if (!in_array($ipaddr, $allowed)) {
                 $result = Utility::ipMatch($allowed);
                 if (!$result) {
-                    return ['A406' => 'Request is not allowed from this ip '.$ipaddr];
+                    return ['A406' => trans('Request is not allowed from this ip :0'.[$ipaddr])];
                 }
             }
         }
 
         if ($secret['header']) {
-            if ($this->server[$secret['header']['custom_key']] != $secret['header']['custom_value']) {
-                return ['A407' => 'Header misconfigured'];
+            if (env($secret['header']['custom_key']) != $secret['header']['custom_value']) {
+                return ['A407' => trans('Header misconfigured')];
             }
         }
 
         if ($secret['protocol']) {
-            if (($this->server['HTTPS'] && $this->server['HTTPS'] == 'off') || $this->server['SERVER_PORT'] != 443) {
-                return ['A407A' => 'Protocol not allowed'];
+            if ((env('HTTPS') && env('HTTPS') == 'off') || env('SERVER_PORT') != 443) {
+                return ['A407A' => trans('Protocol not allowed')];
             }
         }
 

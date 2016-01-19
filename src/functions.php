@@ -77,6 +77,12 @@ function env($name = null, $default = null)
         return $_SERVER;
     }
 
+    if (is_array($name)) {
+        foreach ($name as $innerKey => $innerValue) {
+            return $_SERVER[$innerKey] = $innerValue;
+        }
+    }
+
     return $_SERVER[$name] ?: $default;
 }
 
