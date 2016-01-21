@@ -753,6 +753,7 @@ class Resolver extends Di
         }
 
         $instance = $this->get($signature);
+        $instance->resetOptions();
         $instance->setOptions($options);
         $instance->$beforeRun();
 

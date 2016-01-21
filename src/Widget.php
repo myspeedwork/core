@@ -56,6 +56,13 @@ abstract class Widget extends Di
         return array_keys($arr) !== range(0, count($arr) - 1);
     }
 
+    public function resetOptions()
+    {
+        $this->options = [];
+
+        return $this;
+    }
+
     public function setOptions($options)
     {
         $this->options = array_replace_recursive($this->options, $options);
