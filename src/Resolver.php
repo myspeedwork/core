@@ -793,7 +793,7 @@ class Resolver extends Di
             $controller->$beforeRender();
         }
 
-        if ($method && method_exists($controller, $method)) {
+        if ($method) {
             $controller->{$method}();
         } else {
             $controller->index();
@@ -842,6 +842,15 @@ class Resolver extends Di
             foreach ($filter as $k => $v) {
                 if ($v[0] != '') {
                     $conditions[] = [$alias.$k.' like ' => $v.'%'];
+                }
+            }
+        }
+
+        $filter = $data['efilter'];
+        if (is_array($filter)) {
+            foreach ($filter as $k => $v) {
+                if ($v[0] != '') {
+                    $conditions[] = [$alias.$k.' like ' => '%'.$v];
                 }
             }
         }

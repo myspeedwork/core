@@ -248,7 +248,7 @@ class Acl extends Di
             $fields = $newFields;
         }
 
-        $patterns = $this->config('auth.account.login_filters');
+        $patterns = $this->config('auth.account.patterns');
         if (!is_array($patterns)) {
             $patterns = [];
         }
@@ -416,7 +416,10 @@ class Acl extends Di
             return false;
         }
 
-        return ['pass' => $new_pass, 'key' => $activation_key];
+        return [
+            'pass' => $new_pass,
+            'key'  => $activation_key,
+        ];
     }
 
     /**
@@ -449,7 +452,7 @@ class Acl extends Di
      *
      * @return null|int The user's ID on success, and null on failure.
      */
-    public function usernameExists($username)
+    public function isUsernameExists($username)
     {
         if ($user = $this->getUserBy('username', $username)) {
             return $user;
@@ -465,7 +468,7 @@ class Acl extends Di
      *
      * @return bool|int The user's ID on success, and false on failure.
      */
-    public function emailExists($email)
+    public function isEmailExists($email)
     {
         if ($user = $this->getUserByEmail($email)) {
             return $user;
@@ -589,7 +592,7 @@ class Acl extends Di
         }
 
         if ($this->config('auth.power')) {
-            $power = $this->userGroups($userid);
+            $power = $this->getUserGroups($userid);
 
             $rows = $this->database->find('#__user_groups', 'all', [
                 'conditions' => ['groupid' => $power],
@@ -626,10 +629,10 @@ class Acl extends Di
      *
      * @return string;
      **/
-    public function userGroups($userid)
+    public function getUserGroups($userid)
     {
         if ($this->config('auth.power')) {
-            if ($userid == $this->userid) {
+            if ($userid == $this->get('userid')) {
                 return [$this->get('power')];
             }
 
@@ -642,17 +645,11 @@ class Acl extends Di
             return [$row['power']];
         }
 
-        $rows = $this->database->find('#__user_to_group', 'all', [
+        return $this->database->find('#__user_to_group', 'list', [
             'conditions' => ['user_id' => $userid],
+            'fields'     => ['group_id'],
             ]
         );
-
-        $groups = [];
-        foreach ($rows as $row) {
-            $groups[] = $row['group_id'];
-        }
-
-        return $groups;
     }
 
     /**
@@ -665,7 +662,7 @@ class Acl extends Di
     public function userPermissions($userid)
     {
         $row = $this->database->find('#__user_permissions', 'first', [
-            'conditions' => ['fkuserid' => $userid],
+            'conditions' => ['user_id' => $userid],
             ]
         );
 
@@ -705,16 +702,12 @@ class Acl extends Di
             'members:resetpass:*',
             'members:pwreset:*',
             'members:activate:*',
-
-            'admin_errors:**',
-            'admin_members:logout',
-            'admin_members:login',
-            'admin_members:auth',
-            'admin_members:endpoint',
-            'admin_members:resetpass:*',
-            'admin_members:pwreset:*',
-            'admin_members:activate:*',
         ];
+
+        $firewall = config('auth.firewall');
+        foreach ($public as &$value) {
+            $value = $firewall.$value;
+        }
 
         $permissions = config('auth.permissions');
 
@@ -824,6 +817,10 @@ class Acl extends Di
 
             if ($permission == '*' &&  $component != 'home' && $component != 'admin_home') {
                 return true; // Super Admin Bypass found
+            }
+
+            if ($permission == $component) {
+                return true; // Component Wide Bypass with tasks
             }
 
             if ($permission == $component.':**') {
