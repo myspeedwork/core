@@ -166,7 +166,7 @@ class Resolver extends Di
             $controller->$beforeMethod($options);
         }
 
-        if ((method_exists($controller, $method) || method_exists($controller, '__call'))) {
+        if ($method) {
             $response = $controller->$method($options);
         }
 
@@ -405,7 +405,7 @@ class Resolver extends Di
             $instance->$beforeRender();
         }
 
-        if ($view && (method_exists($instance, $view) || method_exists($instance, '__call'))) {
+        if ($view) {
             $response = $instance->$view($options);
         } else {
             $response = $instance->index($options);
