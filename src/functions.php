@@ -138,17 +138,12 @@ function slug($title, $seperator = '-')
     return Str::slug($title, $seperator);
 }
 
-/**
- * Fetch the IP address of the current visitor.
- *
- * @return string The IP address.
- */
 function ip()
 {
     return Utility::ip();
 }
 
-function _e($string, $replace = [])
+function strtime($time, $date = false, $format = 'Y-m-d')
 {
-    return trans($string, $replace);
+    return Utility::strtotime($time, $date, $format);
 }

@@ -12,14 +12,15 @@
 namespace Speedwork\Core;
 
 use Speedwork\Util\RestUtils;
+use Speedwork\Util\Utility;
 use Speedwork\Util\Xml;
 
 class RestApi extends Api
 {
-    private $cache    = null;
-    private $useronly = false;
-    private $public   = [];
-    private $request  = [];
+    protected $cache    = null;
+    protected $useronly = false;
+    protected $public   = [];
+    protected $request  = [];
 
     public function setCache($cache = '+10 MINUTE')
     {
@@ -149,15 +150,15 @@ class RestApi extends Api
 
         $method = ($view) ? $view : 'index';
 
-        if (method_exists($controller, $method)) {
-            $controller->setData($this->request);
-
-            $data = $controller->$method();
-        } else {
+        if (!method_exists($controller, $method)) {
             $status['A401A'] = trans('Method Not Implemented');
+
+            return $this->outputFormat($status, $data);
         }
 
-        return $this->outputFormat($status, $data);
+        $controller->setData($this->request);
+
+        return $this->formatResponse($controller->$method());
     }
 
     protected function processApp()
@@ -186,8 +187,11 @@ class RestApi extends Api
 
         $controller->setData($this->request);
 
-        $response = $controller->$method();
+        return $this->formatResponse($controller->$method());
+    }
 
+    protected function formatResponse($response = [])
+    {
         $api = $response['api'];
         unset($response['api']);
 
@@ -264,7 +268,7 @@ class RestApi extends Api
     public function output($output = null)
     {
         $outputType = strtolower($this->request['format']);
-        $name       = ($this->request['view']) ? $this->request['view'] : $this->request['option'];
+        $name       = ($this->request['view']) ?: $this->request['option'];
 
         $this->setRequest([]);
 
@@ -278,13 +282,13 @@ class RestApi extends Api
             break;
 
             case 'xml':
-                $output = Xml::fromArray($output, 'api', $name);
-
-                return RestUtils::sendResponse($output, 'application/xml');
+                return RestUtils::sendResponse(Xml::fromArray($output, 'api', $name), 'application/xml');
                 break;
+
             case 'php':
                 return RestUtils::sendResponse(serialize($output));
                 break;
+
             case 'jsonp':
                 if ($request['callback']) {
                     $output = json_encode($output);
@@ -296,6 +300,7 @@ class RestApi extends Api
                     return RestUtils::sendResponse(json_encode($output), 'application/json');
                 }
                 break;
+
             case 'json':
             default:
                 return RestUtils::sendResponse(json_encode($output), 'application/json');
@@ -421,7 +426,7 @@ class RestApi extends Api
             if (!in_array($ipaddr, $allowed)) {
                 $result = Utility::ipMatch($allowed);
                 if (!$result) {
-                    return ['A406' => trans('Request is not allowed from this ip :0'.[$ipaddr])];
+                    return ['A406' => trans('Request is not allowed from this ip :0', [$ipaddr])];
                 }
             }
         }
@@ -484,7 +489,7 @@ class RestApi extends Api
                 return false;
             }
 
-            $user = $this->get('acl')->getUserBy('userid', $row['fkuserid']);
+            $user = $this->get('acl')->getUserBy('userid', $row['user_id']);
         }
 
         if ($user['status'] != 1) {
@@ -500,8 +505,7 @@ class RestApi extends Api
     /**
      * Generate signature and validate against user signature.
      *
-     * @param array  &$params Parameters
-     * @param string $secret  Secret Key
+     * @param string $secret Secret Key
      *
      * @return array data
      **/
