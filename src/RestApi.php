@@ -269,6 +269,7 @@ class RestApi extends Api
     {
         $outputType = strtolower($this->request['format']);
         $name       = ($this->request['view']) ?: $this->request['option'];
+        $callback   = $this->request['callback'];
 
         $this->setRequest([]);
 
@@ -290,10 +291,9 @@ class RestApi extends Api
                 break;
 
             case 'jsonp':
-                if ($request['callback']) {
+                if ($callback) {
                     $output = json_encode($output);
                     header('Content-Type: text/javascript; charset=utf8');
-                    $callback = $request['callback'];
 
                     return $callback.'('.$output.');';
                 } else {

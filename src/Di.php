@@ -138,7 +138,6 @@ class Di
     {
         $this->set($key, $value);
         $this->assign($key, $value);
-        Registry::set($key, $value);
 
         return $this;
     }
@@ -146,6 +145,8 @@ class Di
     public function setData($data)
     {
         $this->data = $data;
+
+        return $this;
     }
 
     /**
