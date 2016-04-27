@@ -32,6 +32,7 @@ class RestApi extends Api
     public function setRequest($request)
     {
         $request['api_key'] = $request['api_key'] ?: env('HTTP_API_KEY');
+        $request['api_sig'] = $request['api_sig'] ?: env('HTTP_API_SIG');
         $request['format']  = $request['format'] ?: $request['output'];
         $request['format']  = $request['format'] ?: env('HTTP_API_FORMAT');
         $request['method']  = $request['method'] ?: env('HTTP_API_METHOD');
@@ -342,9 +343,8 @@ class RestApi extends Api
         }
 
         if ($this->cache) {
-            $cache_key = 'api_cache_'.$api_key;
-
-            $status = $this->get('cache')->remember($cache_key, function () use ($sig) {
+            $catch_key = 'api_cache_'.$api_key.'_'.ip();
+            $status    = $this->get('cache')->remember($catch_key, function () use ($sig) {
                 return $this->validate($sig);
             }, $this->cache);
         } else {
@@ -418,7 +418,7 @@ class RestApi extends Api
         }
 
         if ($secret['allowed_ip']) {
-            $ipaddr = Utility::ip();
+            $ipaddr = ip();
 
             $allowed = explode(',', $secret['allowed_ip']);
             $allowed = array_map('trim', $allowed);

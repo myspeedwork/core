@@ -815,7 +815,7 @@ class Acl extends Di
         foreach ($permissions as $permission) {
             $permission = trim($permission);
 
-            if ($permission == '*' &&  $component != 'home' && $component != 'admin_home') {
+            if ($permission == '*' &&  $component != 'home' && $component != config('auth.firewall').'_home') {
                 return true; // Super Admin Bypass found
             }
 
