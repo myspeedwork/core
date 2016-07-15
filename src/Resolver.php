@@ -610,14 +610,14 @@ class Resolver extends Di
             $component = $this->sanitize($component);
             $url       = $this->getPath($component);
             $dir       = $url['path'];
+            $namespace = $url['namespace'] ?: 'System\\Components\\';
 
             $paths[] = [
                 'file'  => $dir.'components'.DS.$component.DS.'helpers'.DS.(($group) ? $group.DS : '').$helperClass.'.php',
-                'class' => 'System\\Components\\'.ucfirst($component).'\\Helpers\\'.$helperClass,
+                'class' => $namespace.ucfirst($component).'\\Helpers\\'.$helperClass,
             ];
         } else {
             $paths[] = [
-                'file'  => APP.'system'.DS.'helpers'.DS.$helperClass.'.php',
                 'class' => 'System\Helpers\\'.$helperClass,
             ];
 
@@ -681,47 +681,48 @@ class Resolver extends Di
                 $url       = $this->getPath($component);
                 $dir       = $url['path'];
                 $url       = $url['url'];
+                $namespace = $url['namespace'] ?: 'System\\Components\\';
 
                 $paths[] = [
                     'file'  => $dir.'components'.DS.$component.DS.'widgets'.DS.$widget.DS.$widgetClass.'.php',
-                    'class' => 'System\\Components\\'.ucfirst($component).'\\Widgets\\'.$widgetClass,
+                    'class' => $namespace.ucfirst($component).'\\Widgets\\'.$widgetClass,
                     'url'   => $url.'components/'.$component.'/widgets/'.$widget.'/assets/',
                 ];
             } else {
-                $class = 'System\Widgets\\'.$widgetClass;
-
                 $paths[] = [
-                    'file'  => APP.'system'.DS.'widgets'.DS.$widget.DS.$widgetClass.'.php',
-                    'class' => $class,
+                    'class' => 'System\Widgets\\'.ucfirst($widget).'\\'.$widgetClass,
                     'url'   => _APP_URL.'system/widgets/'.$widget.'/assets/',
                 ];
 
                 $paths[] = [
-                    'file'  => SYS.'system'.DS.'widgets'.DS.$widget.DS.$widgetClass.'.php',
-                    'class' => $class,
+                    'class' => 'System\Widgets\\'.ucfirst($widget).'\\'.$widgetClass,
                     'url'   => _SYSURL.'system/widgets/'.$widget.'/assets/',
                 ];
 
                 $paths[] = [
-                    'file'  => APP.'system'.DS.'widgets'.DS.$widgetClass.'.php',
-                    'class' => $class,
+                    'class' => 'System\Widgets\\'.$widgetClass,
                     'url'   => _APP_URL.'system/widgets/assets/',
                 ];
 
                 $paths[] = [
-                    'file'  => SYS.'system'.DS.'widgets'.DS.$widgetClass.'.php',
-                    'class' => $class,
+                    'class' => 'System\Widgets\\'.$widgetClass,
                     'url'   => _SYSURL.'system/widgets/assets/',
                 ];
             }
 
             foreach ($paths as $path) {
-                if (file_exists($path['file'])) {
-                    $widgetClass = $path['class'];
-
+                $exists = false;
+                if ($path['file'] && file_exists($path['file'])) {
+                    $exists = true;
                     require_once $path['file'];
+                } elseif (class_exists($path['class'])) {
+                    $exists = true;
+                }
 
-                    $assets   = $path['url'];
+                if ($exists) {
+                    $widgetClass = $path['class'];
+                    $assets      = $path['url'];
+
                     $instance = new $widgetClass();
                     $instance->setContainer($this->di);
 
