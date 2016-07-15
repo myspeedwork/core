@@ -480,7 +480,7 @@ class RestApi extends Api
                 return false;
             }
         } else {
-            $row = $this->database->find('#__api_users', 'first', [
+            $row = $this->database->find('#__users_api', 'first', [
                 'conditions' => ['status' => 1, 'api_key' => $api_key],
                 'ignore'     => true,
             ]);
