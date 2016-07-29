@@ -36,13 +36,21 @@ class RestApi extends Api
         $request['format']  = $request['format'] ?: $request['output'];
         $request['format']  = $request['format'] ?: env('HTTP_API_FORMAT');
         $request['method']  = $request['method'] ?: env('HTTP_API_METHOD');
+        $request['option']  = $request['option'] ?: env('HTTP_API_OPTION');
+        $request['view']    = $request['view'] ?: env('HTTP_API_VIEW');
 
-        // Method is combination of option and view separated by . (dot)
-        $method = explode('.', strtolower($request['method']));
+        if ($request['option']) {
+            $method = explode('.', strtolower($request['option']));
 
-        //format speedwork specification for component/view
-        $request['option'] = $method[0];
-        $request['view']   = $method[1];
+            $request['option'] = $method[0];
+            $request['view']   = $method[1] ?: $request['view'];
+        } else {
+            // Method is combination of option and view separated by . (dot)
+            $method = explode('.', strtolower($request['method']));
+            //format speedwork specification for component/view
+            $request['option'] = $method[0];
+            $request['view']   = $method[1];
+        }
 
         $this->request = $request;
 
@@ -268,13 +276,13 @@ class RestApi extends Api
      */
     public function output($output = null)
     {
-        $outputType = strtolower($this->request['format']);
-        $name       = ($this->request['view']) ?: $this->request['option'];
-        $callback   = $this->request['callback'];
+        $format   = strtolower($this->request['format']);
+        $name     = ($this->request['view']) ?: $this->request['option'];
+        $callback = $this->request['callback'];
 
         $this->setRequest([]);
 
-        switch ($outputType) {
+        switch ($format) {
             case 'none':
                 return;
             break;
@@ -331,6 +339,20 @@ class RestApi extends Api
                 'members.activate',
                 'members.pwreset',
             ]);
+        }
+
+        $option = $this->request['option'];
+        $view   = $this->request['view'];
+
+        $permissons = [
+            $option.'.'.$view,
+            $option.'.*',
+        ];
+
+        foreach ($permissons as $permisson) {
+            if (in_array($permisson, $public)) {
+                return true;
+            }
         }
 
         if (in_array($this->request['method'], $public)) {
