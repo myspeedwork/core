@@ -6,9 +6,8 @@
  * @link http://github.com/speedwork
  *
  * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * file that was distributed with this source code
  */
-
 namespace Speedwork\Core;
 
 /**
@@ -20,12 +19,12 @@ final class Registry
 
     public static function get($key, $default = null)
     {
-        return (isset(self::$data[$key]) ? self::$data[$key] : $default);
+        return isset(self::$data[$key]) ? self::$data[$key] : $default;
     }
 
     public static function gets($key, $val)
     {
-        return (isset(self::$data[$key][$val]) ? self::$data[$key][$val] : null);
+        return isset(self::$data[$key][$val]) ? self::$data[$key][$val] : null;
     }
 
     public static function set($key, $value)

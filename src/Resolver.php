@@ -6,9 +6,8 @@
  * @link http://github.com/speedwork
  *
  * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * file that was distributed with this source code
  */
-
 namespace Speedwork\Core;
 
 use Closure;
@@ -253,8 +252,6 @@ class Resolver extends Di
                 }
             }
         }
-
-        return;
     }
 
     public function loadView($component, $view = '', $type = 'component')

@@ -6,9 +6,8 @@
  * @link http://github.com/speedwork
  *
  * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * file that was distributed with this source code
  */
-
 namespace Speedwork\Core;
 
 /**
@@ -159,7 +158,7 @@ class Acl extends Di
             }
 
             return false;
-        };
+        }
 
         $conditions   = [];
         $conditions[] = $this->getMatches($username);
@@ -180,7 +179,7 @@ class Acl extends Di
             return false;
         }
 
-        $key = ($hash) ?  unsalt($password, $row['password']) : $password;
+        $key = ($hash) ? unsalt($password, $row['password']) : $password;
         // check if passwords match
         if (strcmp($key, $row['password'])) {
             $this->eventManager()->dispatch($event);
@@ -292,7 +291,7 @@ class Acl extends Di
         }
 
         if ($password !== null) {
-            $key = ($hash) ?  unsalt($password, $row['password']) : $password;
+            $key = ($hash) ? unsalt($password, $row['password']) : $password;
 
             // check if passwords match
             if (strcmp($key, $row['password'])) {
@@ -448,9 +447,9 @@ class Acl extends Di
     /**
      * Checks whether the given username exists.
      *
-     * @param string $username Username.
+     * @param string $username Username
      *
-     * @return null|int The user's ID on success, and null on failure.
+     * @return null|int The user's ID on success, and null on failure
      */
     public function isUsernameExists($username)
     {
@@ -464,9 +463,9 @@ class Acl extends Di
     /**
      * Checks whether the given email exists.
      *
-     * @param string $email Email.
+     * @param string $email Email
      *
-     * @return bool|int The user's ID on success, and false on failure.
+     * @return bool|int The user's ID on success, and false on failure
      */
     public function isEmailExists($email)
     {
@@ -507,7 +506,7 @@ class Acl extends Di
      * Retrieve user info by a given field.
      *
      * @param string     $field The field to retrieve the user with.  id | slug | email | login
-     * @param int|string $value A value for $field.  A user ID, slug, email address, or login name.
+     * @param int|string $value A value for $field.  A user ID, slug, email address, or login name
      *
      * @return bool|object False on failure, User DB row object
      */
@@ -539,7 +538,7 @@ class Acl extends Di
      * Retrieve user info by a given field.
      *
      * @param string     $field The field to retrieve the user with.  id | slug | email | login
-     * @param int|string $value A value for $field.  A user ID, slug, email address, or login name.
+     * @param int|string $value A value for $field.  A user ID, slug, email address, or login name
      *
      * @return bool|object False on failure, User DB row object
      */
