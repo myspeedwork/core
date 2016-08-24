@@ -6,9 +6,8 @@
  * @link http://github.com/speedwork
  *
  * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * file that was distributed with this source code
  */
-
 namespace Speedwork\Core;
 
 use Speedwork\Util\RestUtils;
@@ -410,7 +409,7 @@ class RestApi extends Api
      * @param bool  $sig      Flag to specify force authentication
      * @param bool  $useronly Flag to check user only
      *
-     * @return Boolean response
+     * @return bool response
      **/
     protected function validate($sig = true)
     {

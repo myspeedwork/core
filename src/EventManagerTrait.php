@@ -6,9 +6,8 @@
  * @link http://github.com/speedwork
  *
  * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * file that was distributed with this source code
  */
-
 namespace Speedwork\Core;
 
 use Cake\Event\Event;
@@ -53,11 +52,11 @@ trait EventManagerTrait
      *
      * Returns a dispatched event.
      *
-     * @param string      $name    Name of the event.
+     * @param string      $name    Name of the event
      * @param array|null  $data    Any value you wish to be transported with this event to
-     *                             it can be read by listeners.
+     *                             it can be read by listeners
      * @param object|null $subject The object that this event applies to
-     *                             ($this by default).
+     *                             ($this by default)
      *
      * @return \Cake\Event\Event
      */

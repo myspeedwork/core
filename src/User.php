@@ -6,9 +6,8 @@
  * @link http://github.com/speedwork
  *
  * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * file that was distributed with this source code
  */
-
 namespace Speedwork\Core;
 
 /**
@@ -29,7 +28,7 @@ class User extends Di
      **/
     public function get($key, $key1 = '')
     {
-        return ($key1) ? $this->data[$key][$key1] :  $this->data[$key];
+        return ($key1) ? $this->data[$key][$key1] : $this->data[$key];
     }
 
     /**
@@ -51,7 +50,7 @@ class User extends Di
      **/
     public function has($key, $key1 = '')
     {
-        return ($key1) ? isset($this->data[$key][$key1]) :  isset($this->data[$key]);
+        return ($key1) ? isset($this->data[$key][$key1]) : isset($this->data[$key]);
     }
 
     /**
@@ -167,9 +166,9 @@ class User extends Di
     /**
      * Removes option by name.
      *
-     * @param string $name Option name to remove.
+     * @param string $name Option name to remove
      *
-     * @return bool True, if succeed. False, if failure.
+     * @return bool True, if succeed. False, if failure
      */
     public function deleteOption($name)
     {
@@ -179,7 +178,7 @@ class User extends Di
     /**
      * Serialize data, if needed.
      *
-     * @param mixed $data Data that might be serialized.
+     * @param mixed $data Data that might be serialized
      *
      * @return mixed A scalar data
      */
