@@ -690,6 +690,7 @@ class Resolver extends Di
                 ];
             } else {
                 $paths[] = [
+                    'file'  => APP.'system'.DS.'widgets'.DS.$widget.DS.$widgetClass.'.php',
                     'class' => 'System\Widgets\\'.ucfirst($widget).'\\'.$widgetClass,
                     'url'   => _APP_URL.'system/widgets/'.$widget.'/assets/',
                 ];
@@ -700,6 +701,7 @@ class Resolver extends Di
                 ];
 
                 $paths[] = [
+                    'file'  => APP.'system'.DS.'widgets'.DS.$widgetClass.'.php',
                     'class' => 'System\Widgets\\'.$widgetClass,
                     'url'   => _APP_URL.'system/widgets/assets/',
                 ];
