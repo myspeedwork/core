@@ -1,13 +1,14 @@
 <?php
 
-/**
- * This file is part of the Speedwork framework.
+/*
+ * This file is part of the Speedwork package.
  *
- * @link http://github.com/speedwork
+ * (c) Sankar <sankar.suda@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code
  */
+
 namespace Speedwork\Core;
 
 use Speedwork\Container\Container;
@@ -17,6 +18,8 @@ use Speedwork\Container\Container;
  */
 class Application extends Container
 {
+    const VERSION = 'v1.0-dev';
+
     public function __construct()
     {
         parent::__construct();

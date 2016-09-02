@@ -1,13 +1,14 @@
 <?php
 
-/**
+/*
  * This file is part of the Speedwork package.
  *
- * @link http://github.com/speedwork
+ * (c) Sankar <sankar.suda@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code
  */
+
 namespace Speedwork\Core;
 
 use Closure;
@@ -714,7 +715,7 @@ class Resolver extends Di
                 if ($path['file'] && file_exists($path['file'])) {
                     $exists = true;
                     require_once $path['file'];
-                } elseif (class_exists($path['class'])) {
+                } elseif (!$path['file'] && class_exists($path['class'])) {
                     $exists = true;
                 }
 

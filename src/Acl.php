@@ -1,13 +1,14 @@
 <?php
 
-/**
+/*
  * This file is part of the Speedwork package.
  *
- * @link http://github.com/speedwork
+ * (c) Sankar <sankar.suda@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code
  */
+
 namespace Speedwork\Core;
 
 /**
@@ -814,7 +815,7 @@ class Acl extends Di
         foreach ($permissions as $permission) {
             $permission = trim($permission);
 
-            if ($permission == '*' &&  $component != 'home' && $component != config('auth.firewall').'_home') {
+            if ($permission == '*' && $component != 'home' && $component != config('auth.firewall').'_home') {
                 return true; // Super Admin Bypass found
             }
 
