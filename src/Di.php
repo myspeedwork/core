@@ -20,7 +20,7 @@ use Speedwork\Util\Utility;
  */
 class Di
 {
-    use EventManagerTrait;
+    use EventDispatcherTrait;
 
     protected $post   = [];
     protected $get    = [];

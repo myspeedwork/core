@@ -32,19 +32,19 @@ class Resolver extends Di
      * @var array
      */
     protected $system = [
-        'component' => [],
-        'module'    => [],
+        'components' => [],
+        'modules'    => [],
     ];
 
     public function setSystem($system = [])
     {
         if ($system && is_array($system)) {
-            if ($system['component'] && is_array($system['component'])) {
-                $this->system['component'] = array_merge($this->system['component'], $system['component']);
+            if ($system['components'] && is_array($system['components'])) {
+                $this->system['components'] = array_merge($this->system['components'], $system['components']);
             }
 
-            if ($system['module'] && is_array($system['module'])) {
-                $this->system['module'] = array_merge($this->system['module'], $system['module']);
+            if ($system['modules'] && is_array($system['modules'])) {
+                $this->system['modules'] = array_merge($this->system['modules'], $system['modules']);
             }
         }
 
@@ -53,7 +53,7 @@ class Resolver extends Di
 
     protected function sanitize($option)
     {
-        return strtolower($option);
+        return ucfirst(strtolower($option));
     }
 
     protected function setPath($path)
@@ -73,7 +73,7 @@ class Resolver extends Di
     protected function getPath($option, $type = 'component')
     {
         $option = strtolower($option);
-        $system = $this->system[$type][$option];
+        $system = $this->system[$type.'s'][$option];
 
         if ($system) {
             if (is_array($system)) {
@@ -115,7 +115,7 @@ class Resolver extends Di
             $url       = $url['url'];
 
             if (!empty($path)) {
-                $file = $path.'components'.DS.$option.DS.$class_name.'.php';
+                $file = $path.'Components'.DS.$option.DS.$class_name.'.php';
 
                 if (!file_exists($file)) {
                     throw new \Exception('Controller '.$option.' not found', 1);
@@ -124,7 +124,7 @@ class Resolver extends Di
                 require_once $file;
             }
 
-            $class = $namespace.ucfirst($option).'\\'.$class_name;
+            $class = $namespace.$option.'\\'.$class_name;
 
             if (!class_exists($class)) {
                 throw new \Exception('Controller '.$option.' not found', 1);
@@ -134,7 +134,7 @@ class Resolver extends Di
             $controller->setContainer($this->di);
             $controller->{'model'} = $this->loadModel($option);
 
-            $assets = $url.'components/'.$option.'/assets/';
+            $assets = $url.'Components/'.$option.'/assets/';
             $this->set($signature, $controller);
             $this->set($signature.'.assets', $assets);
         } else {
@@ -179,8 +179,7 @@ class Resolver extends Di
 
     protected function loadModel($option)
     {
-        $option = $this->sanitize($option);
-
+        $option    = $this->sanitize($option);
         $signature = 'model'.$option;
 
         if (!$this->has($signature)) {
@@ -192,7 +191,7 @@ class Resolver extends Di
             $url       = $url['url'];
 
             if (!empty($path)) {
-                $file = $path.'components'.DS.$option.DS.$class_name.'.php';
+                $file = $path.'Components'.DS.$option.DS.$class_name.'.php';
 
                 if (!file_exists($file)) {
                     throw new \Exception('Model '.$option.' not found', 1);
@@ -201,7 +200,7 @@ class Resolver extends Di
                 require_once $file;
             }
 
-            $class = $namespace.ucfirst($option).'\\'.$class_name;
+            $class = $namespace.$option.'\\'.$class_name;
 
             if (!class_exists($class)) {
                 throw new \Exception('Model '.$option.' not found', 1);
@@ -232,7 +231,7 @@ class Resolver extends Di
         $option = $this->sanitize($option);
 
         $type   = (empty($type)) ? 'component' : $type;
-        $folder = ($type == 'component') ? 'components' : 'modules';
+        $folder = ($type == 'component') ? 'Components' : 'Modules';
 
         $url  = $this->getPath($option, $type);
         $path = $url['path'];
@@ -262,7 +261,7 @@ class Resolver extends Di
             return;
         }
 
-        return $this->get('engine')->create($view_file)->render();
+        return $this->get('view.engine')->create($view_file)->render();
     }
 
     public function requestLayout($component, $view = '', $type = 'component')
@@ -289,7 +288,7 @@ class Resolver extends Di
             $url       = $url['url'];
 
             if (!empty($path)) {
-                $file = $path.'components'.DS.$option.DS.$class_name.'.php';
+                $file = $path.'Components'.DS.$option.DS.$class_name.'.php';
 
                 if (!file_exists($file)) {
                     return ['A400' => 'Api Not Implemented'];
@@ -298,7 +297,7 @@ class Resolver extends Di
                 require_once $file;
             }
 
-            $class = $namespace.ucfirst($option).'\\'.$class_name;
+            $class = $namespace.$option.'\\'.$class_name;
 
             if (!class_exists($class)) {
                 return ['A400' => 'Api Not Implemented'];
@@ -349,7 +348,7 @@ class Resolver extends Di
 
         $view_file = $this->findView(trim($option.'.'.$view, '.'), 'component');
 
-        return $this->get('engine')->create($view_file, $response)->render();
+        return $this->get('view.engine')->create($view_file, $response)->render();
     }
 
     public function loadModuleController($option, $view = '', $options = [])
@@ -366,7 +365,7 @@ class Resolver extends Di
             $url       = $url['url'];
 
             if (!empty($path)) {
-                $file = $path.'modules'.DS.$option.DS.$class_name.'.php';
+                $file = $path.'Modules'.DS.$option.DS.$class_name.'.php';
 
                 if (!file_exists($file)) {
                     throw new \Exception('Module '.$option.' not found', 1);
@@ -375,7 +374,7 @@ class Resolver extends Di
                 require_once $file;
             }
 
-            $class = $namespace.ucfirst($option).'\\'.$class_name;
+            $class = $namespace.$option.'\\'.$class_name;
 
             if (!class_exists($class)) {
                 throw new \Exception('Module '.$option.' not found', 1);
@@ -384,7 +383,7 @@ class Resolver extends Di
             $instance = new $class();
             $instance->setContainer($this->di);
 
-            $assets = $url.'modules/'.$option.'/assets/';
+            $assets = $url.'Modules/'.$option.'/assets/';
             $this->set($signature, $instance);
             $this->set($signature.'.assets', $assets);
         } else {
@@ -452,7 +451,7 @@ class Resolver extends Di
 
         $view_file = $this->findView(trim($option.'.'.$view, '.'), 'module');
 
-        echo $this->get('engine')->create($view_file, $response)->render();
+        echo $this->get('view.engine')->create($view_file, $response)->render();
     }
 
     /**
@@ -611,8 +610,8 @@ class Resolver extends Di
             $namespace = $url['namespace'] ?: 'System\\Components\\';
 
             $paths[] = [
-                'file'  => $dir.'components'.DS.$component.DS.'helpers'.DS.(($group) ? $group.DS : '').$helperClass.'.php',
-                'class' => $namespace.ucfirst($component).'\\Helpers\\'.$helperClass,
+                'file'  => $dir.'Components'.DS.$component.DS.'Helpers'.DS.(($group) ? $group.DS : '').$helperClass.'.php',
+                'class' => $namespace.ucfirst($component).'\\Helpers\\'.(($group) ? $group.'\\' : '').$helperClass,
             ];
         } else {
             $paths[] = [
@@ -660,19 +659,17 @@ class Resolver extends Di
      **/
     public function widget($name, $options = [], $includeOnly = false)
     {
-        $name = str_replace(' ', '', ucwords(str_replace('-', ' ', $name)));
-
+        $name      = str_replace(' ', '', ucwords(str_replace('-', ' ', $name)));
         $signature = 'widget'.strtolower($name);
 
         if (!$this->has($signature)) {
             $widgetName = explode(':', $name);
             $component  = $widgetName[1];
+            $widget1    = explode('.', $widgetName[0]);
+            $widget     = ucfirst($widget1[0]);
+            $view       = ucfirst($widget1[1]);
 
-            $widget1 = explode('.', $widgetName[0]);
-            $widget  = strtolower($widget1[0]);
-            $view    = $widget1[1];
-
-            $widgetClass = ($view) ? ucfirst($view) : ucfirst($widget1[0]);
+            $class = ($view) ? $view : $widget;
 
             if ($component) {
                 $component = $this->sanitize($component);
@@ -682,31 +679,31 @@ class Resolver extends Di
                 $namespace = $url['namespace'] ?: 'System\\Components\\';
 
                 $paths[] = [
-                    'file'  => $dir.'components'.DS.$component.DS.'widgets'.DS.$widget.DS.$widgetClass.'.php',
-                    'class' => $namespace.ucfirst($component).'\\Widgets\\'.$widgetClass,
-                    'url'   => $url.'components/'.$component.'/widgets/'.$widget.'/assets/',
+                    'file'  => $dir.'Components'.DS.$component.DS.'Widgets'.DS.$widget.DS.$class.'.php',
+                    'class' => $namespace.$component.'\\Widgets\\'.$widget.'\\'.$class,
+                    'url'   => $url.'Components/'.$component.'/Widgets/'.$widget.'/assets/',
                 ];
             } else {
                 $paths[] = [
-                    'file'  => APP.'system'.DS.'widgets'.DS.$widget.DS.$widgetClass.'.php',
-                    'class' => 'System\Widgets\\'.ucfirst($widget).'\\'.$widgetClass,
-                    'url'   => _APP_URL.'system/widgets/'.$widget.'/assets/',
+                    'file'  => APP.'system'.DS.'Widgets'.DS.$widget.DS.$class.'.php',
+                    'class' => 'System\\Widgets\\'.$widget.'\\'.$class,
+                    'url'   => _APP_URL.'system/Widgets/'.$widget.'/assets/',
                 ];
 
                 $paths[] = [
-                    'class' => 'System\Widgets\\'.ucfirst($widget).'\\'.$widgetClass,
-                    'url'   => _SYSURL.'system/widgets/'.$widget.'/assets/',
+                    'class' => 'System\\Widgets\\'.$widget.'\\'.$class,
+                    'url'   => _SYSURL.'system/Widgets/'.$widget.'/assets/',
                 ];
 
                 $paths[] = [
-                    'file'  => APP.'system'.DS.'widgets'.DS.$widgetClass.'.php',
-                    'class' => 'System\Widgets\\'.$widgetClass,
-                    'url'   => _APP_URL.'system/widgets/assets/',
+                    'file'  => APP.'system'.DS.'Widgets'.DS.$class.'.php',
+                    'class' => 'System\\Widgets\\'.$class,
+                    'url'   => _APP_URL.'system/Widgets/assets/',
                 ];
 
                 $paths[] = [
-                    'class' => 'System\Widgets\\'.$widgetClass,
-                    'url'   => _SYSURL.'system/widgets/assets/',
+                    'class' => 'System\\Widgets\\'.$class,
+                    'url'   => _SYSURL.'system/Widgets/assets/',
                 ];
             }
 
@@ -720,10 +717,10 @@ class Resolver extends Di
                 }
 
                 if ($exists) {
-                    $widgetClass = $path['class'];
-                    $assets      = $path['url'];
+                    $class  = $path['class'];
+                    $assets = $path['url'];
 
-                    $instance = new $widgetClass();
+                    $instance = new $class();
                     $instance->setContainer($this->di);
 
                     $this->set($signature, $instance);
@@ -738,7 +735,7 @@ class Resolver extends Di
         }
 
         if (!$instance) {
-            throw new \Exception("Widget '".$name."' not found", 1);
+            throw new \Exception("Widget '".$name."' not found");
         }
 
         $this->setPath($assets);

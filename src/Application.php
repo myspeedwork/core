@@ -18,7 +18,8 @@ use Speedwork\Container\Container;
  */
 class Application extends Container
 {
-    const VERSION = 'v1.0-dev';
+    const VERSION     = 'v1.0-dev';
+    protected $booted = false;
 
     public function __construct()
     {
@@ -26,8 +27,37 @@ class Application extends Container
         static::setInstance($this);
     }
 
-    public function run()
+    /**
+     * Boots all service providers.
+     *
+     * This method is automatically called by handle(), but you can use it
+     * to boot all service providers when not handling a request.
+     */
+    public function boot()
     {
+        if ($this->booted) {
+            return;
+        }
+
+        $this->booted = true;
+
+        foreach ($this->providers as $provider) {
+            if ($provider instanceof EventListenerProviderInterface) {
+                $provider->subscribe($this, $this['dispatcher']);
+            }
+
+            if ($provider instanceof BootableProviderInterface) {
+                $provider->boot($this);
+            }
+        }
+    }
+
+    public function handle()
+    {
+        if (!$this->booted) {
+            $this->boot();
+        }
+
         $this->get('template')->render();
     }
 }

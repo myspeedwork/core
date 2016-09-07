@@ -148,14 +148,14 @@ class Acl extends Di
     public function logUserIn($username, $password, $remember = false, $hash = true)
     {
         //call the Event
-        $event = $this->dispatch('event.members.before.login', [
+        $event = $this->fire('members.before.login', [
             'username' => $username,
-            'passowrd' => $password,
+            'password' => $password,
         ]);
 
-        if ($event->isStopped()) {
-            if (isset($event->result)) {
-                return $event->result;
+        if ($event->isPropagationStopped()) {
+            if (isset($event->results)) {
+                return $event->results;
             }
 
             return false;
@@ -166,16 +166,16 @@ class Acl extends Di
 
         $row = $this->database->find('#__users', 'first', [
             'conditions' => $conditions,
-            ]
-        );
+        ]);
 
-        $event = $this->event('event.members.login.failed', [
+        $eventName = 'members.login.failed';
+        $event     = $this->event($eventName, [
             'username' => $username,
             'passowrd' => $password,
         ]);
 
         if (empty($row['userid'])) {
-            $this->eventManager()->dispatch($event);
+            $this->eventManager()->dispatch($eventName, $event);
 
             return false;
         }
@@ -183,14 +183,14 @@ class Acl extends Di
         $key = ($hash) ? unsalt($password, $row['password']) : $password;
         // check if passwords match
         if (strcmp($key, $row['password'])) {
-            $this->eventManager()->dispatch($event);
+            $this->eventManager()->dispatch($eventName, $event);
 
             return false;
         }
 
         // if that user is inactive send status
         if ($row['status'] != 1) {
-            $this->eventManager()->dispatch($event);
+            $this->eventManager()->dispatch($eventName, $event);
 
             return $row['status'];
         }
@@ -201,7 +201,7 @@ class Acl extends Di
 
         // Check whether can allow to view index
         if (!$this->isAllowed()) {
-            $this->eventManager()->dispatch($event);
+            $this->eventManager()->dispatch($eventName, $event);
 
             return false;
         }
@@ -225,7 +225,7 @@ class Acl extends Di
 
         $row['plain_password'] = $password;
         //call the Event
-        $this->dispatch('event.members.after.login', [
+        $this->fire('members.after.login', [
             'userid'         => $userid,
             'username'       => $username,
             'plain_password' => $password,
@@ -314,7 +314,7 @@ class Acl extends Di
     public function logout()
     {
         //call the hooks
-        $this->dispatch('event.members.before.logout');
+        $this->dispatch('members.before.logout');
         $this->get('session')->clear();
 
         setcookie(COOKIE_NAME, '', time() - COOKIE_TIME, COOKIE_PATH);
@@ -368,7 +368,7 @@ class Acl extends Di
         }
 
         //call the Event
-        $this->dispatch('event.members.update.password', [
+        $this->fire('members.update.password', [
             'userid'   => $userid,
             'passowrd' => $new_password,
         ]);
