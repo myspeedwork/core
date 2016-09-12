@@ -9,9 +9,8 @@
  * file that was distributed with this source code
  */
 
-namespace Speedwork\Core;
+namespace Speedwork\Core\Traits;
 
-use Cake\Event\Event;
 use Symfony\Component\EventDispatcher\GenericEvent;
 
 /**
@@ -25,13 +24,13 @@ trait EventDispatcherTrait
      */
     protected function dispatch($name, $event = null)
     {
-        return $this->get('dispatcher')->dispatch($name, $event);
+        return $this->get('events')->dispatch($name, $event);
     }
 
     protected function fire($name, $params = null)
     {
         $event = $this->event($name, $params);
-        $this->get('dispatcher')->dispatch($name, $event);
+        $this->get('events')->dispatch($name, $event);
 
         return $event;
     }

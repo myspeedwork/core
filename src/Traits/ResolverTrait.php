@@ -9,41 +9,36 @@
  * file that was distributed with this source code
  */
 
-namespace Speedwork\Core;
+namespace Speedwork\Core\Traits;
 
 /**
  * @author sankar <sankar.suda@gmail.com>
  */
 trait ResolverTrait
 {
-    public function controller($component, $options = [])
+    public function controller($name, $options = [])
     {
-        return $this->get('resolver')->requestController($component, $options);
+        return $this->get('resolver')->requestController($name, $options);
     }
 
-    public function model($component)
+    public function model($name)
     {
-        return $this->get('resolver')->requestModel($component);
+        return $this->get('resolver')->requestModel($name);
     }
 
-    public function action($option, &$options = [])
+    public function action($name, &$options = [])
     {
-        list($option, $view) = explode('.', $option);
-        echo $this->get('resolver')->component($option, $view, $options);
+        echo $this->get('resolver')->component($name, $options);
     }
 
-    public function component($option, &$options = [])
+    public function component($name, &$options = [])
     {
-        list($option, $view) = explode('.', $option);
-
-        return $this->get('resolver')->component($option, $view, $options);
+        return $this->get('resolver')->component($name, $options);
     }
 
-    public function module($option, &$options = [])
+    public function module($name, &$options = [])
     {
-        list($option, $view) = explode('.', $option);
-
-        return $this->get('resolver')->module($option, $view, $options);
+        return $this->get('resolver')->module($name, $options);
     }
 
     public function helper($name)
@@ -104,9 +99,9 @@ trait ResolverTrait
             $mid .= '<input type="hidden" name="'.$k.'" value="'.$v.'" />';
         }
 
-        $ajax['form']  = $start.$mid.$end;
-        $ajax['start'] = $start.$mid;
-        $ajax['end']   = $end;
+        $ajax['form']    = $start.$mid.$end;
+        -+$ajax['start'] = $start.$mid;
+        $ajax['end']     = $end;
 
         $class           = 'render-'.uniqid();
         $params['class'] = '.'.$class;

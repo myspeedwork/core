@@ -11,12 +11,16 @@
 
 namespace Speedwork\Core;
 
+use Speedwork\Core\Traits\RequestTrait;
+use Speedwork\Core\Traits\ResolverTrait;
+
 /**
  * @author sankar <sankar.suda@gmail>
  */
 class Controller extends Di
 {
     use ResolverTrait;
+    use RequestTrait;
 
     public function ajaxRequest($url, $total = 0, $params = [])
     {

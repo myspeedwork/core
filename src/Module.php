@@ -11,10 +11,14 @@
 
 namespace Speedwork\Core;
 
+use Speedwork\Core\Traits\RequestTrait;
+use Speedwork\Core\Traits\ResolverTrait;
+
 /**
  * @author sankar <sankar.suda@gmail.com>
  */
 class Module extends Di
 {
     use ResolverTrait;
+    use RequestTrait;
 }

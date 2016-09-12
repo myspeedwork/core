@@ -11,6 +11,8 @@
 
 namespace Speedwork\Core;
 
+use Speedwork\Core\Traits\ResolverTrait;
+
 /**
  * @author sankar <sankar.suda@gmail>
  */

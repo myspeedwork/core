@@ -28,6 +28,36 @@ class Application extends Container
     }
 
     /**
+     * Get the version number of the application.
+     *
+     * @return string
+     */
+    public function version()
+    {
+        return static::VERSION;
+    }
+
+    /**
+     * Determine if we are running in the console.
+     *
+     * @return bool
+     */
+    public function isConsole()
+    {
+        return php_sapi_name() == 'cli';
+    }
+
+    /**
+     * Determine if the application has booted.
+     *
+     * @return bool
+     */
+    public function isBooted()
+    {
+        return $this->booted;
+    }
+
+    /**
      * Boots all service providers.
      *
      * This method is automatically called by handle(), but you can use it
@@ -59,5 +89,12 @@ class Application extends Container
         }
 
         $this->get('template')->render();
+    }
+
+    /**
+     * Terminate the application.
+     */
+    public function terminate()
+    {
     }
 }

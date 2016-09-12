@@ -56,6 +56,23 @@ function config($key = null, $default = null)
 }
 
 /**
+ * Helper function to read paths and locations of app.
+ *
+ * @param string $name  Name of the path or location
+ * @param bool   $isUrl Is required location
+ *
+ * @return string
+ */
+function path($name, $isUrl = false)
+{
+    if ($isUrl) {
+        return app('config')->get('locations.'.$name);
+    }
+
+    return app('config')->get('paths.'.$name);
+}
+
+/**
  * Get / set the specified session value.
  *
  * If an array is passed as the key, we will assume you want to set an array of values.

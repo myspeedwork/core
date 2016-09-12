@@ -11,8 +11,8 @@
 
 namespace Speedwork\Core;
 
-use Speedwork\Container\Container;
-use Speedwork\Util\Router;
+use Speedwork\Core\Traits\CapsuleManagerTrait;
+use Speedwork\Core\Traits\EventDispatcherTrait;
 use Speedwork\Util\Utility;
 
 /**
@@ -21,28 +21,7 @@ use Speedwork\Util\Utility;
 class Di
 {
     use EventDispatcherTrait;
-
-    protected $post   = [];
-    protected $get    = [];
-    protected $data   = [];
-    protected $server = [];
-    protected $cookie = [];
-    protected $di     = [];
-
-    public function __construct(Container $di = null)
-    {
-        $this->di     = $di;
-        $this->post   = &$_POST;
-        $this->get    = &$_GET;
-        $this->data   = &$_REQUEST;
-        $this->server = &$_SERVER;
-        $this->cookie = &$_COOKIE;
-    }
-
-    public function setContainer(Container $di)
-    {
-        $this->di = $di;
-    }
+    use CapsuleManagerTrait;
 
     /**
      * magic method to get property.
@@ -65,7 +44,7 @@ class Di
      */
     public function get($key)
     {
-        return $this->di->get($key);
+        return $this->container->get($key);
     }
 
     /**
@@ -77,7 +56,7 @@ class Di
      */
     public function has($key)
     {
-        return $this->di->has($key);
+        return $this->container->has($key);
     }
 
     /**
@@ -88,7 +67,7 @@ class Di
      */
     public function set($key, $value)
     {
-        $this->di->set($key, $value);
+        $this->container->set($key, $value);
 
         return $this;
     }
