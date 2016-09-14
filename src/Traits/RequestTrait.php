@@ -39,5 +39,14 @@ trait RequestTrait
         $this->data   = &$_REQUEST;
         $this->server = &$_SERVER;
         $this->cookie = &$_COOKIE;
+
+        return $this;
+    }
+
+    public function setData($data)
+    {
+        $this->data = $data;
+
+        return $this;
     }
 }

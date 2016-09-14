@@ -13,6 +13,7 @@ namespace Speedwork\Core;
 
 use Speedwork\Core\Traits\CapsuleManagerTrait;
 use Speedwork\Core\Traits\EventDispatcherTrait;
+use Speedwork\Core\Traits\FilterTrait;
 use Speedwork\Util\Utility;
 
 /**
@@ -22,6 +23,7 @@ class Di
 {
     use EventDispatcherTrait;
     use CapsuleManagerTrait;
+    use FilterTrait;
 
     /**
      * magic method to get property.
@@ -117,13 +119,6 @@ class Di
         return $this;
     }
 
-    public function setData($data)
-    {
-        $this->data = $data;
-
-        return $this;
-    }
-
     /**
      * Redirect the url.
      *
@@ -175,5 +170,15 @@ class Di
     public function toTime($time, $date = false, $format = 'Y-m-d')
     {
         return Utility::strtotime($time, $date, $format);
+    }
+
+    /**
+     * Short method to get resolver.
+     *
+     * @return \Speedwork\Core\Resolver Resolver object
+     */
+    public function resolver()
+    {
+        return $this->get('resolver');
     }
 }

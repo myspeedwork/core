@@ -11,7 +11,9 @@
 
 namespace Speedwork\Core;
 
+use Speedwork\Container\BootableInterface;
 use Speedwork\Container\Container;
+use Speedwork\Container\EventListenerInterface;
 
 /**
  * @author sankar <sankar.suda@gmail.com>
@@ -72,11 +74,11 @@ class Application extends Container
         $this->booted = true;
 
         foreach ($this->providers as $provider) {
-            if ($provider instanceof EventListenerProviderInterface) {
-                $provider->subscribe($this, $this['dispatcher']);
+            if ($provider instanceof EventListenerInterface) {
+                $provider->subscribe($this, $this['events']);
             }
 
-            if ($provider instanceof BootableProviderInterface) {
+            if ($provider instanceof BootableInterface) {
                 $provider->boot($this);
             }
         }

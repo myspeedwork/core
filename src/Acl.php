@@ -117,8 +117,7 @@ class Acl extends Di
 
         $row = $this->database->find('#__users', 'first', [
             'conditions' => $conditions,
-            ]
-        );
+        ]);
 
         if (empty($row['userid'])) {
             return false;
@@ -220,8 +219,8 @@ class Acl extends Di
         $this->database->update('#__users', [
             'last_signin' => time(),
             'ip'          => env('REMOTE_ADDR'),
-            ], ['userid' => $userid]
-        );
+            ], ['userid'  => $userid,
+        ]);
 
         $row['plain_password'] = $password;
         //call the Event
@@ -284,8 +283,7 @@ class Acl extends Di
 
         $row = $this->database->find('#__users', 'first', [
             'conditions' => $conditions,
-            ]
-        );
+        ]);
 
         if (empty($row['userid'])) {
             return false;
@@ -338,24 +336,6 @@ class Acl extends Di
         }
 
         return true;
-
-        $new_pass       = $this->generatePassword();
-        $activation_key = $this->generateActivationKey();
-
-        $new_md5 = salt($new_pass);
-
-        $result = $this->database->update('#__users', [
-            'password'       => $new_md5,
-            'last_pw_change' => time(),
-            'activation_key' => $activation_key,
-            ], ['userid' => $row['userid']]
-        );
-
-        if (!$result) {
-            return false;
-        }
-
-        return ['pass' => $new_pass, 'key' => $activation_key];
     }
 
     public function updatePassword($new_password, $userid = null)
@@ -374,11 +354,10 @@ class Acl extends Di
         ]);
 
         return $this->database->update('#__users', [
-            'password' => $new_password, 'last_pw_change' => time(),
-            ], [
-            'userid' => $userid,
-            ]
-        );
+            'password'       => $new_password,
+            'last_pw_change' => time(), ], [
+            'userid'         => $userid,
+        ]);
     }
 
     public function resetPassword($username)
@@ -393,8 +372,7 @@ class Acl extends Di
 
         $row = $this->database->find('#__users', 'first', [
             'conditions' => $conditions,
-            ]
-        );
+        ]);
 
         if (empty($row['userid'])) {
             return false;

@@ -11,6 +11,8 @@
 
 namespace Speedwork\Core\Traits;
 
+use Speedwork\Util\Utility;
+
 /**
  * @author sankar <sankar.suda@gmail.com>
  */
@@ -51,16 +53,6 @@ trait ResolverTrait
         $this->get('resolver')->widget($name, $options, $include);
     }
 
-    public function conditions(&$data = [], $alias = null)
-    {
-        return $this->get('resolver')->conditions($data, $alias);
-    }
-
-    public function ordering(&$data = [], $ordering = [])
-    {
-        return $this->get('resolver')->ordering($data, $ordering);
-    }
-
     public function ajax($url = null, $total = 0, $params = [])
     {
         $is_api = $this->get('is_api_request');
@@ -77,8 +69,8 @@ trait ResolverTrait
         $is_ajax = $this->get('is_ajax_request');
 
         $ajax            = [];
-        $ajax['enable']  = ($is_ajax == false) ? true : false;
-        $ajax['disable'] = ($is_ajax == false) ? true : false;
+        $ajax['enable']  = ($is_ajax === false) ? true : false;
+        $ajax['disable'] = ($is_ajax === false) ? true : false;
 
         $form = [];
 
