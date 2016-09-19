@@ -95,12 +95,12 @@ abstract class Widget extends Di
     {
         //Add Scripts
         foreach ($this->scripts as $script) {
-            $this->get('template')->script($script, 'bower');
+            $this->get('assets')->addScript($script, 'bower');
         }
 
         //Add Styles
         foreach ($this->styles as $style) {
-            $this->get('template')->styleSheet($style, 'bower');
+            $this->get('assets')->addStyleSheet($style, 'bower');
         }
 
         $selectors = [];
@@ -126,7 +126,7 @@ abstract class Widget extends Di
         $js .= '$this.'.$name.'('.$this->getDecodedOptions().');';
         $js .= '});';
 
-        $this->get('template')->addScriptDeclaration($js);
+        $this->get('assets')->addScriptDeclaration($js);
     }
 
     public function beforeRun()

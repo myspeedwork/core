@@ -488,13 +488,12 @@ class RestApi extends Api
         $row = [];
 
         if (strpos($api_key, ':') !== false) {
-            $api_key = explode(':', $api_key);
-            $token   = $api_key[0];
+            list($token, $password) = explode(':', $api_key);
 
-            if ($api_key[1] === 'x') {
+            if ($password === 'x') {
                 $user = $this->get('acl')->getUserBy('token', $token);
             } else {
-                $password = ($this->useronly) ? null : $api_key[1];
+                $password = ($this->useronly) ? null : $password;
                 $user     = $this->get('acl')->isValidUser($token, $password);
             }
 

@@ -16,7 +16,7 @@ namespace Speedwork\Core;
  */
 class Acl extends Di
 {
-    private $permissions = [];
+    protected $permissions = [];
 
     public function getLoginFields()
     {
@@ -32,7 +32,7 @@ class Acl extends Di
         return $fields;
     }
 
-    private function getMatches($username)
+    protected function getMatches($username)
     {
         $username = strtolower(trim($username));
         $fields   = $this->getLoginFields();
@@ -45,7 +45,12 @@ class Acl extends Di
         return ['or' => $matches];
     }
 
-    private function lookupCookies()
+    /**
+     * Check cookies avaliable from for this user.
+     *
+     * @return bool [description]
+     */
+    protected function hasCookies()
     {
         if (empty($this->cookie[COOKIE_NAME]) || empty($this->cookie[COOKIE_KEY])) {
             return false;
@@ -54,11 +59,12 @@ class Acl extends Di
         return true;
     }
 
-    /*
-        this functions checks if there are any existing session variables set at last login
-        returns 0 if no sessions were found and 1 otherwise
-    */
-    private function lookupSessions()
+    /**
+     * Check any exising sessions aviable from last login.
+     *
+     * @return boolen [description]
+     */
+    protected function hasSessions()
     {
         if (!$this->get('session')->has(COOKIE_NAME) || !$this->get('session')->has(COOKIE_KEY)) {
             return false;
@@ -67,18 +73,20 @@ class Acl extends Di
         return true;
     }
 
-    /*
-        this function checks if the current user is logged in.
-    */
+    /**
+     * Check the current user is logged in.
+     *
+     * @return bool [description]
+     */
     public function isUserLoggedIn()
     {
-        if ($this->lookupCookies()) {
+        if ($this->hasCookies()) {
             if (!$this->checkIsUserLoggedIn($this->cookie[COOKIE_NAME], $this->cookie[COOKIE_KEY])) {
                 $this->logout();
 
                 return false;
             } else {
-                if (!$this->lookupSessions()) {
+                if (!$this->hasSessions()) {
                     $this->get('session')->set(COOKIE_NAME, $this->cookie[COOKIE_NAME]);
                     $this->get('session')->set(COOKIE_KEY, $this->cookie[COOKIE_KEY]);
                 } elseif (strcmp($this->cookie[COOKIE_NAME], $this->get('session')->get(COOKIE_NAME))
@@ -91,7 +99,7 @@ class Acl extends Di
                 return true;
             }
         }
-        if ($this->lookupSessions()) {
+        if ($this->hasSessions()) {
             if (!$this->checkIsUserLoggedIn($this->get('session')->get(COOKIE_NAME), $this->get('session')->get(COOKIE_KEY))) {
                 return false;
             }
@@ -110,7 +118,7 @@ class Acl extends Di
      *
      * @return [type] [description]
      */
-    private function checkIsUserLoggedIn($username, $user_key)
+    protected function checkIsUserLoggedIn($username, $user_key)
     {
         $conditions   = [];
         $conditions[] = $this->getMatches($username);
@@ -244,6 +252,7 @@ class Acl extends Di
                     $newFields[] = $key;
                 }
             }
+            unset($value);
             $fields = $newFields;
         }
 
@@ -387,8 +396,8 @@ class Acl extends Di
             'password'       => $new_md5,
             'last_pw_change' => time(),
             'activation_key' => $activation_key,
-            ], ['userid' => $row['userid']]
-        );
+            ], ['userid'     => $row['userid'],
+        ]);
 
         if (!$result) {
             return false;
@@ -503,8 +512,7 @@ class Acl extends Di
 
         $row = $this->database->find('#__users', 'first', [
             'conditions' => $conditions,
-            ]
-        );
+        ]);
 
         if (empty($row['userid'])) {
             return false;
@@ -536,8 +544,7 @@ class Acl extends Di
         $row = $this->database->find('#__users', 'first', [
             'conditions' => $conditions,
             'fields'     => ['userid'],
-            ]
-        );
+        ]);
 
         if (empty($row['userid'])) {
             return false;
@@ -617,8 +624,7 @@ class Acl extends Di
             $row = $this->database->find('#__users', 'first', [
                 'conditions' => ['userid' => $userid],
                 'fields'     => ['power'],
-                ]
-            );
+            ]);
 
             return [$row['power']];
         }
@@ -626,8 +632,7 @@ class Acl extends Di
         return $this->database->find('#__user_to_group', 'list', [
             'conditions' => ['user_id' => $userid],
             'fields'     => ['group_id'],
-            ]
-        );
+        ]);
     }
 
     /**
@@ -641,8 +646,7 @@ class Acl extends Di
     {
         $row = $this->database->find('#__user_permissions', 'first', [
             'conditions' => ['user_id' => $userid],
-            ]
-        );
+        ]);
 
         return array_merge(['include' => [], 'exclude' => []], (array) json_decode($row['permissions'], true));
     }

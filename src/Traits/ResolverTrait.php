@@ -69,8 +69,8 @@ trait ResolverTrait
         $is_ajax = $this->get('is_ajax_request');
 
         $ajax            = [];
-        $ajax['enable']  = ($is_ajax === false) ? true : false;
-        $ajax['disable'] = ($is_ajax === false) ? true : false;
+        $ajax['enable']  = ($is_ajax === true) ? false : true;
+        $ajax['disable'] = $ajax['enable'];
 
         $form = [];
 
@@ -91,9 +91,9 @@ trait ResolverTrait
             $mid .= '<input type="hidden" name="'.$k.'" value="'.$v.'" />';
         }
 
-        $ajax['form']    = $start.$mid.$end;
-        -+$ajax['start'] = $start.$mid;
-        $ajax['end']     = $end;
+        $ajax['form']  = $start.$mid.$end;
+        $ajax['start'] = $start.$mid;
+        $ajax['end']   = $end;
 
         $class           = 'render-'.uniqid();
         $params['class'] = '.'.$class;

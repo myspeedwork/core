@@ -54,6 +54,7 @@ class Router
         }
 
         $link = static::fixLink($link);
+
         if ($rewrite) {
             foreach (static::$_rewrite as $re) {
                 $url = $re->rewrite($link, $url);

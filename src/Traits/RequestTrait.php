@@ -11,8 +11,6 @@
 
 namespace Speedwork\Core\Traits;
 
-use Speedwork\Container\Container;
-
 /**
  * Request variables handle.
  *
@@ -26,9 +24,8 @@ trait RequestTrait
     protected $server = [];
     protected $cookie = [];
 
-    public function __construct(Container $container = null)
+    public function __construct()
     {
-        parent::__construct($container);
         $this->setRequestParams();
     }
 
@@ -37,7 +34,6 @@ trait RequestTrait
         $this->post   = &$_POST;
         $this->get    = &$_GET;
         $this->data   = &$_REQUEST;
-        $this->server = &$_SERVER;
         $this->cookie = &$_COOKIE;
 
         return $this;

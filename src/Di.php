@@ -46,7 +46,7 @@ class Di
      */
     public function get($key)
     {
-        return $this->container->get($key);
+        return $this->getContainer()->get($key);
     }
 
     /**
@@ -58,7 +58,7 @@ class Di
      */
     public function has($key)
     {
-        return $this->container->has($key);
+        return $this->getcontainer()->has($key);
     }
 
     /**
@@ -69,7 +69,7 @@ class Di
      */
     public function set($key, $value)
     {
-        $this->container->set($key, $value);
+        $this->getcontainer()->set($key, $value);
 
         return $this;
     }
@@ -149,17 +149,12 @@ class Di
             return true;
         }
 
-        if (headers_sent()) {
-            echo  '<meta http-equiv="refresh" content="'.$time.'; url='.$url.'"/>';
-
-            return true;
-        }
-
         if ($time) {
             header('refresh:'.$time.';url='.str_replace('&amp;', '&', $url));
         } else {
             header('location:'.str_replace('&amp;', '&', $url));
         }
+        die;
     }
 
     public function link($url)

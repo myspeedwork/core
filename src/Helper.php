@@ -11,6 +11,7 @@
 
 namespace Speedwork\Core;
 
+use Speedwork\Container\Container;
 use Speedwork\Core\Traits\RequestTrait;
 use Speedwork\Core\Traits\ResolverTrait;
 
@@ -21,4 +22,13 @@ class Helper extends Di
 {
     use ResolverTrait;
     use RequestTrait;
+
+    public function __construct(Container $container = null)
+    {
+        if ($container) {
+            $this->setContainer($container);
+        }
+
+        $this->setRequestParams();
+    }
 }

@@ -47,15 +47,10 @@ trait ModuleResolverTrait
             $instance = new $class();
             $instance->setContainer($this->getContainer());
 
-            $assets = $url.'Modules/'.$option.'/assets/';
             $this->set($signature, $instance);
-            $this->set($signature.'.assets', $assets);
         } else {
-            $assets   = $this->get($signature.'.assets');
             $instance = $this->get($signature);
         }
-
-        $this->setPath($assets);
 
         if ($options['position']) {
             $instance->position = $options['position'];
@@ -194,15 +189,13 @@ trait ModuleResolverTrait
             $conditions[] = ['m.access <> 2'];
         }
 
-        $res = $this->database->find(
-            '#__core_template_modules', ($count) ? 'count' : 'all', [
+        $res = $this->database->find('#__core_template_modules', ($count) ? 'count' : 'all', [
             'joins'      => $joins,
             'alias'      => 'tm',
             'conditions' => $conditions,
             'fields'     => ['m.*'],
             'order'      => ['tm.ordering'],
-            ]
-        );
+        ]);
 
         if ($count) {
             return $res;

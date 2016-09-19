@@ -11,6 +11,7 @@
 
 namespace Speedwork\Core;
 
+use Speedwork\Core\Traits\RequestTrait;
 use Speedwork\Core\Traits\ResolverTrait;
 
 /**
@@ -19,6 +20,7 @@ use Speedwork\Core\Traits\ResolverTrait;
 class Api extends Di
 {
     use ResolverTrait;
+    use RequestTrait;
 
     /**
      * store status value.

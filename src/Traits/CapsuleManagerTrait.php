@@ -32,13 +32,6 @@ trait CapsuleManagerTrait
      */
     protected $container;
 
-    public function __construct(Container $container = null)
-    {
-        if ($container) {
-            $this->setContainer($container);
-        }
-    }
-
     /**
      * Make this capsule instance available globally.
      */

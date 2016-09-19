@@ -20,13 +20,49 @@ use Speedwork\Container\EventListenerInterface;
  */
 class Application extends Container
 {
-    const VERSION     = 'v1.0-dev';
+    /**
+     * The Speedwork framework version.
+     *
+     * @var string
+     */
+    const VERSION = 'v1.0-dev';
+
+    /**
+     * Indicates if the application has "booted".
+     *
+     * @var bool
+     */
     protected $booted = false;
 
-    public function __construct()
+    /**
+     * The base path for the installation.
+     *
+     * @var string
+     */
+    protected $basePath;
+
+    /**
+     * The environment file to load during bootstrapping.
+     *
+     * @var string
+     */
+    protected $environmentFile = '.env';
+
+    /**
+     * Application default paths.
+     *
+     * @var array
+     */
+    protected $paths = [];
+
+    public function __construct($basePath = null)
     {
         parent::__construct();
         static::setInstance($this);
+
+        if ($basePath) {
+            $this->setBasePath($basePath);
+        }
     }
 
     /**
@@ -84,13 +120,106 @@ class Application extends Container
         }
     }
 
-    public function handle()
+    /**
+     * Set the base path for the application.
+     *
+     * @param string $basePath
+     *
+     * @return $this
+     */
+    public function setBasePath($basePath)
     {
-        if (!$this->booted) {
-            $this->boot();
+        $this->basePath = rtrim($basePath, '\/').DS;
+
+        $this->bindPathsInContainer();
+
+        return $this;
+    }
+
+    /**
+     * Get the base path of the Laravel installation.
+     *
+     * @return string
+     */
+    public function basePath()
+    {
+        return $this->basePath;
+    }
+
+    /**
+     * Bind all of the application paths in the container.
+     */
+    protected function bindPathsInContainer()
+    {
+        $paths = [
+            'env'      => '.env',
+            'base'     => '',
+            'config'   => 'config'.DS,
+            'public'   => 'public'.DS,
+            'static'   => 'public'.DS.'static'.DS,
+            'images'   => 'public'.DS.'uploads'.DS,
+            'themes'   => 'public'.DS.'themes'.DS,
+            'upload'   => 'public'.DS.'uploads'.DS,
+            'media'    => 'public'.DS.'media'.DS,
+            'email'    => 'public'.DS.'email'.DS,
+            'pcache'   => 'public'.DS.'cache'.DS,
+            'storage'  => 'storage'.DS,
+            'tmp'      => 'storage'.DS.'tmp'.DS,
+            'cache'    => 'storage'.DS.'cache'.DS,
+            'logs'     => 'storage'.DS.'logs'.DS,
+            'log'      => 'storage'.DS.'logs'.DS,
+            'lang'     => 'storage'.DS.'lang'.DS,
+            'views'    => 'storage'.DS.'views'.DS,
+            'database' => 'storage'.DS.'database'.DS,
+        ];
+
+        $this->set('path', $this->basePath().'system'.DS);
+        $this->paths['path'] = $this->basePath().'system'.DS;
+
+        foreach ($paths as $name => $path) {
+            $this->set('path.'.$name, $this->basePath().$path);
+            $this->paths['path.'.$name] = $this->basePath().$path;
         }
 
-        $this->get('template')->render();
+        return $this;
+    }
+
+    /**
+     * Get the path to application directories.
+     *
+     * @param string $name Name of the path
+     *
+     * @return string|array Complete path or all paths
+     */
+    public function getPath($name = null)
+    {
+        if ($name) {
+            return $this->paths[$name];
+        }
+
+        return $this->paths;
+    }
+
+    /**
+     * Get or check the current application environment.
+     *
+     * @param  mixed
+     *
+     * @return string|bool
+     */
+    public function environment($envs = [])
+    {
+        if (count($envs) > 0) {
+            foreach ($envs as $env) {
+                if (preg_match($env, $this['env'])) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return $this['env'];
     }
 
     /**
