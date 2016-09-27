@@ -30,7 +30,7 @@ trait CapsuleManagerTrait
      *
      * @var \Speedwork\Container\Container
      */
-    protected $container;
+    protected $app;
 
     /**
      * Make this capsule instance available globally.
@@ -47,16 +47,65 @@ trait CapsuleManagerTrait
      */
     public function getContainer()
     {
-        return $this->container;
+        return $this->app;
     }
 
     /**
      * Set the IoC container instance.
      *
-     * @param \Speedwork\Container\Container $container
+     * @param \Speedwork\Container\Container $app
      */
-    public function setContainer(Container $container)
+    public function setContainer(Container $app)
     {
-        $this->container = $container;
+        $this->app = $app;
+    }
+
+    /**
+     * magic method to get property.
+     *
+     * @param string $key value to get
+     *
+     * @return bool
+     */
+    public function __get($key)
+    {
+        return $this->get($key);
+    }
+
+    /**
+     * get the key from stored data value.
+     *
+     * @param string $key The name of the variable to access
+     *
+     * @return mixed returns your stored value
+     */
+    public function get($key)
+    {
+        return $this->getContainer()->get($key);
+    }
+
+    /**
+     * get the key from stored data value.
+     *
+     * @param string $key The name of the variable to access
+     *
+     * @return mixed returns your stored value
+     */
+    public function has($key)
+    {
+        return $this->getContainer()->has($key);
+    }
+
+    /**
+     * store key value pair in registry.
+     *
+     * @param string $key   name of the variable
+     * @param mixed  $value value to store in registry
+     */
+    public function set($key, $value)
+    {
+        $this->getContainer()->set($key, $value);
+
+        return $this;
     }
 }

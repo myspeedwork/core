@@ -15,6 +15,7 @@ use Speedwork\Core\Traits\CapsuleManagerTrait;
 use Speedwork\Core\Traits\EventDispatcherTrait;
 use Speedwork\Core\Traits\FilterTrait;
 use Speedwork\Util\Utility;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 
 /**
  * @author sankar <sankar.suda@gmail>
@@ -24,55 +25,6 @@ class Di
     use EventDispatcherTrait;
     use CapsuleManagerTrait;
     use FilterTrait;
-
-    /**
-     * magic method to get property.
-     *
-     * @param string $key value to get
-     *
-     * @return bool
-     */
-    public function __get($key)
-    {
-        return $this->get($key);
-    }
-
-    /**
-     * get the key from stored data value.
-     *
-     * @param string $key The name of the variable to access
-     *
-     * @return mixed returns your stored value
-     */
-    public function get($key)
-    {
-        return $this->getContainer()->get($key);
-    }
-
-    /**
-     * get the key from stored data value.
-     *
-     * @param string $key The name of the variable to access
-     *
-     * @return mixed returns your stored value
-     */
-    public function has($key)
-    {
-        return $this->getcontainer()->has($key);
-    }
-
-    /**
-     * store key value pair in registry.
-     *
-     * @param string $key   name of the variable
-     * @param mixed  $value value to store in registry
-     */
-    public function set($key, $value)
-    {
-        $this->getcontainer()->set($key, $value);
-
-        return $this;
-    }
 
     /**
      * Helper fuction for configuration read and write.
@@ -128,11 +80,12 @@ class Di
      *
      * @return [type] [description]
      */
-    public function redirect($url, $time = 0, $rewrite = true)
+    public function redirect($url, $status = 302, $rewrite = true)
     {
         if (empty($url)) {
             $url = 'index.php';
         }
+
         if ($rewrite) {
             $url = $this->link($url);
         }
@@ -149,12 +102,7 @@ class Di
             return true;
         }
 
-        if ($time) {
-            header('refresh:'.$time.';url='.str_replace('&amp;', '&', $url));
-        } else {
-            header('location:'.str_replace('&amp;', '&', $url));
-        }
-        die;
+        return new RedirectResponse($url, $status);
     }
 
     public function link($url)

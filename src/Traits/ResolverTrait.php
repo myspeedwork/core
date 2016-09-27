@@ -18,12 +18,12 @@ use Speedwork\Util\Utility;
  */
 trait ResolverTrait
 {
-    public function controller($name, $options = [])
+    public function getController($name, $options = [])
     {
         return $this->get('resolver')->requestController($name, $options);
     }
 
-    public function model($name)
+    public function getModel($name)
     {
         return $this->get('resolver')->requestModel($name);
     }
@@ -33,22 +33,22 @@ trait ResolverTrait
         echo $this->get('resolver')->component($name, $options);
     }
 
-    public function component($name, &$options = [])
+    public function getMomponent($name, &$options = [])
     {
         return $this->get('resolver')->component($name, $options);
     }
 
-    public function module($name, &$options = [])
+    public function getModule($name, &$options = [])
     {
         return $this->get('resolver')->module($name, $options);
     }
 
-    public function helper($name)
+    public function getHelper($name)
     {
         return $this->get('resolver')->helper($name);
     }
 
-    public function widget($name, $options = [], $include = false)
+    public function getWidget($name, $options = [], $include = false)
     {
         $this->get('resolver')->widget($name, $options, $include);
     }

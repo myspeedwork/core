@@ -11,7 +11,6 @@
 
 namespace Speedwork\Core;
 
-use Speedwork\Core\Traits\RequestTrait;
 use Speedwork\Core\Traits\ResolverTrait;
 
 /**
@@ -20,7 +19,8 @@ use Speedwork\Core\Traits\ResolverTrait;
 class Api extends Di
 {
     use ResolverTrait;
-    use RequestTrait;
+
+    protected $data = [];
 
     /**
      * store status value.
@@ -28,4 +28,11 @@ class Api extends Di
      * @var array
      */
     public $status = [];
+
+    public function setData($data)
+    {
+        $this->data = $data;
+
+        return $this;
+    }
 }

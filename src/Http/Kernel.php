@@ -12,6 +12,7 @@
 namespace Speedwork\Core\Http;
 
 use Speedwork\Container\Container;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * @author Sankar <sankar.suda@gmail.com>
@@ -46,6 +47,9 @@ class Kernel implements KernelInterface
         $request->enableHttpMethodParameterOverride();
         $this->bootstrap();
         $content = $this->sendRequest($request);
+        if ($content instanceof Response) {
+            return $content;
+        }
 
         $response->setContent($content);
 

@@ -11,10 +11,12 @@
 
 namespace Speedwork\Core;
 
-use Speedwork\Util\RestUtils;
 use Speedwork\Util\Utility;
 use Speedwork\Util\Xml;
 
+/**
+ * @author Sankar <sankar.suda@gmail.com>
+ */
 class RestApi extends Api
 {
     protected $cache    = null;
@@ -31,13 +33,13 @@ class RestApi extends Api
 
     public function setRequest($request)
     {
-        $request['api_key'] = $request['api_key'] ?: env('HTTP_API_KEY');
-        $request['api_sig'] = $request['api_sig'] ?: env('HTTP_API_SIG');
+        $request['api_key'] = $request['api_key'] ?: env('HTTP_X_API_KEY');
+        $request['api_sig'] = $request['api_sig'] ?: env('HTTP_X_API_SIG');
         $request['format']  = $request['format'] ?: $request['output'];
-        $request['format']  = $request['format'] ?: env('HTTP_API_FORMAT');
-        $request['method']  = $request['method'] ?: env('HTTP_API_METHOD');
-        $request['option']  = $request['option'] ?: env('HTTP_API_OPTION');
-        $request['view']    = $request['view'] ?: env('HTTP_API_VIEW');
+        $request['format']  = $request['format'] ?: env('HTTP_X_API_FORMAT');
+        $request['method']  = $request['method'] ?: env('HTTP_X_API_METHOD');
+        $request['option']  = $request['option'] ?: env('HTTP_X_API_OPTION');
+        $request['view']    = $request['view'] ?: env('HTTP_X_API_VIEW');
 
         if ($request['option']) {
             $method = explode('.', strtolower($request['option']));
@@ -282,6 +284,8 @@ class RestApi extends Api
 
         $this->setRequest([]);
 
+        $this->setHeader($output['status'], $output['message']);
+
         switch ($format) {
             case 'none':
                 return;
@@ -292,27 +296,21 @@ class RestApi extends Api
             break;
 
             case 'xml':
-                return RestUtils::sendResponse(Xml::fromArray($output, 'api', $name), 'application/xml');
+                return $this->response(Xml::fromArray($output, 'api', $name), 'application/xml');
                 break;
 
             case 'php':
-                return RestUtils::sendResponse(serialize($output));
+                return $this->response(serialize($output));
                 break;
 
             case 'jsonp':
-                if ($callback) {
-                    $output = json_encode($output);
-                    header('Content-Type: text/javascript; charset=utf8');
-
-                    return $callback.'('.$output.');';
-                } else {
-                    return RestUtils::sendResponse(json_encode($output), 'application/json');
-                }
-                break;
-
             case 'json':
             default:
-                return RestUtils::sendResponse(json_encode($output), 'application/json');
+                if ($callback) {
+                    return $this->response($callback.'('.json_encode($output).');', 'text/javascript');
+                } else {
+                    return $this->response(json_encode($output), 'application/json');
+                }
                 break;
         }
     }
@@ -440,7 +438,7 @@ class RestApi extends Api
         }
 
         if ($secret['allowed_ip']) {
-            $ipaddr = ip();
+            $ipaddr = Utility::ip();
 
             $allowed = explode(',', $secret['allowed_ip']);
             $allowed = array_map('trim', $allowed);
@@ -542,5 +540,54 @@ class RestApi extends Api
         $str = $secret.$str;
 
         return md5($str);
+    }
+
+    public function captureRequest()
+    {
+        $data = [];
+        $data = array_replace_recursive($data, $_GET);
+        $data = array_replace_recursive($data, $_POST);
+
+        $body = file_get_contents('php://input');
+        if ($body) {
+            $content_type = false;
+            if (env('CONTENT_TYPE')) {
+                $content_type = strtolower(env('CONTENT_TYPE'));
+                $content_type = explode(';', $content_type);
+                $content_type = $content_type[0];
+            }
+        }
+
+        switch ($content_type) {
+            case 'application/json':
+                $body = json_decode($body, true);
+                break;
+        }
+
+        if (is_array($body)) {
+            $data = array_merge_recursive($data, $body);
+        }
+
+        unset($body);
+
+        return $data;
+    }
+
+    public function response($body = '', $contentType = 'text/html')
+    {
+        $contentType = $contentType ?: 'text/html';
+        // set the content type
+        header('Content-type: '.$contentType.'; charset=utf8');
+
+        return $body;
+    }
+
+    protected function setHeader($code, $message)
+    {
+        if ($code == '200' || $code == 'OK') {
+            header('HTTP/1.1 200 OK');
+        } else {
+            header('HTTP/1.1 404 '.$message);
+        }
     }
 }

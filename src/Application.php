@@ -42,18 +42,18 @@ class Application extends Container
     protected $basePath;
 
     /**
-     * The environment file to load during bootstrapping.
-     *
-     * @var string
-     */
-    protected $environmentFile = '.env';
-
-    /**
      * Application default paths.
      *
      * @var array
      */
     protected $paths = [];
+
+    /**
+     * The application namespace.
+     *
+     * @var string
+     */
+    protected $namespace = null;
 
     public function __construct($basePath = null)
     {
@@ -160,7 +160,8 @@ class Application extends Container
             'images'   => 'public'.DS.'uploads'.DS,
             'themes'   => 'public'.DS.'themes'.DS,
             'upload'   => 'public'.DS.'uploads'.DS,
-            'media'    => 'public'.DS.'media'.DS,
+            'media'    => 'public'.DS.'uploads'.DS.'media'.DS,
+            'users'    => 'public'.DS.'uploads'.DS.'users'.DS,
             'email'    => 'public'.DS.'email'.DS,
             'pcache'   => 'public'.DS.'cache'.DS,
             'storage'  => 'storage'.DS,
@@ -227,5 +228,21 @@ class Application extends Container
      */
     public function terminate()
     {
+    }
+
+    /**
+     * Get the application namespace.
+     *
+     * @throws \RuntimeException
+     *
+     * @return string
+     */
+    public function getNamespace()
+    {
+        if (!is_null($this->namespace)) {
+            return $this->namespace;
+        }
+
+        return 'System\\';
     }
 }

@@ -66,10 +66,10 @@ function config($key = null, $default = null)
 function path($name, $isUrl = false)
 {
     if ($isUrl) {
-        return app('config')->get('locations.'.$name);
+        return app('location.'.$name);
     }
 
-    return app('config')->get('paths.'.$name);
+    return app('path.'.$name);
 }
 
 /**

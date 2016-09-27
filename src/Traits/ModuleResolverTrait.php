@@ -21,27 +21,11 @@ trait ModuleResolverTrait
         $signature = 'mod'.$option;
 
         if (!$this->has($signature)) {
-            $class_name = 'Module';
-
-            $url       = $this->getPath($option, 'module');
-            $path      = $url['path'];
-            $namespace = $url['namespace'] ?: 'System\\Modules\\';
-            $url       = $url['url'];
-
-            if (!empty($path)) {
-                $file = $path.'Modules'.DS.$option.DS.$class_name.'.php';
-
-                if (!file_exists($file)) {
-                    throw new \Exception('Module '.$option.' not found', 1);
-                }
-
-                include_once $file;
-            }
-
-            $class = $namespace.$option.'\\'.$class_name;
+            $namespace = $this->getNameSpace($option, 'module');
+            $class     = $namespace.'Module';
 
             if (!class_exists($class)) {
-                throw new \Exception('Module '.$option.' not found', 1);
+                throw new \Exception('Module '.$class.' not found');
             }
 
             $instance = new $class();
