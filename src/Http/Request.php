@@ -538,9 +538,20 @@ class Request extends SymfonyRequest implements ArrayableInterface, ArrayAccess
      *
      * @param array $input
      */
-    public function merge(array $input)
+    public function add(array $input)
     {
         $this->getInputSource()->add($input);
+    }
+
+    /**
+     * Merge new input into the current request's input array.
+     *
+     * @param array $input
+     */
+    public function addInput(array $input)
+    {
+        $this->request->add($input);
+        $this->query->add($input);
     }
 
     /**
@@ -756,43 +767,6 @@ class Request extends SymfonyRequest implements ArrayableInterface, ArrayAccess
     }
 
     /**
-     * Create an Speedwork request from a Symfony instance.
-     *
-     * @param \Symfony\Component\HttpFoundation\Request $request
-     *
-     * @return \Speedwork\Http\Request
-     */
-    public static function createFromBase(SymfonyRequest $request)
-    {
-        if ($request instanceof static) {
-            return $request;
-        }
-
-        $content = $request->content;
-
-        $request = (new static())->duplicate(
-
-            $request->query->all(), $request->request->all(), $request->attributes->all(),
-
-            $request->cookies->all(), $request->files->all(), $request->server->all()
-        );
-
-        $request->content = $content;
-
-        $request->request = $request->getInputSource();
-
-        return $request;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function duplicate(array $query = null, array $request = null, array $attributes = null, array $cookies = null, array $files = null, array $server = null)
-    {
-        return parent::duplicate($query, $request, $attributes, $cookies, array_filter((array) $files), $server);
-    }
-
-    /**
      * Get all of the input and files for the request.
      *
      * @return array
@@ -845,33 +819,5 @@ class Request extends SymfonyRequest implements ArrayableInterface, ArrayAccess
     public function offsetUnset($offset)
     {
         $this->getInputSource()->remove($offset);
-    }
-
-    /**
-     * Check if an input element is set on the request.
-     *
-     * @param string $key
-     *
-     * @return bool
-     */
-    public function __isset($key)
-    {
-        return !is_null($this->__get($key));
-    }
-
-    /**
-     * Get an input element from the request.
-     *
-     * @param string $key
-     *
-     * @return mixed
-     */
-    public function __get($key)
-    {
-        if ($this->offsetExists($key)) {
-            return $this->offsetGet($key);
-        }
-
-        return $this->route($key);
     }
 }

@@ -17,6 +17,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * Request variables handle.
@@ -44,6 +45,19 @@ trait RequestTrait
         $this->cookie = &$_COOKIE;
 
         return $this;
+    }
+
+    /**
+     * Retrieve an input item from the request.
+     *
+     * @param string            $key
+     * @param string|array|null $default
+     *
+     * @return string|array
+     */
+    public function input($key = null, $default = null)
+    {
+        return $this->get('request')->input($key, $default);
     }
 
     public function setData($data)
@@ -120,6 +134,10 @@ trait RequestTrait
      */
     public function abort($statusCode, $message = '', array $headers = [])
     {
+        if ($statusCode == 404) {
+            throw new NotFoundHttpException($message);
+        }
+
         throw new HttpException($statusCode, $message, null, $headers);
     }
 }

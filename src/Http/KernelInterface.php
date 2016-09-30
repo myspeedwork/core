@@ -22,16 +22,6 @@ interface KernelInterface
     public function bootstrap();
 
     /**
-     * Handle an incoming HTTP request.
-     *
-     * @param \Symfony\Component\HttpFoundation\Request  $request
-     * @param \Symfony\Component\HttpFoundation\Response $response
-     *
-     * @return \Symfony\Component\HttpFoundation\Response
-     */
-    public function handle($request, $response);
-
-    /**
      * Perform any final actions for the request lifecycle.
      *
      * @param \Symfony\Component\HttpFoundation\Request  $request

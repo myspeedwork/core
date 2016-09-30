@@ -182,7 +182,7 @@ class Acl extends Di
         ]);
 
         if (empty($row['userid'])) {
-            $this->eventManager()->dispatch($eventName, $event);
+            $this->dispatch($eventName, $event);
 
             return false;
         }
@@ -190,14 +190,14 @@ class Acl extends Di
         $key = ($hash) ? unsalt($password, $row['password']) : $password;
         // check if passwords match
         if (strcmp($key, $row['password'])) {
-            $this->eventManager()->dispatch($eventName, $event);
+            $this->dispatch($eventName, $event);
 
             return false;
         }
 
         // if that user is inactive send status
         if ($row['status'] != 1) {
-            $this->eventManager()->dispatch($eventName, $event);
+            $this->dispatch($eventName, $event);
 
             return $row['status'];
         }
@@ -207,8 +207,8 @@ class Acl extends Di
         $this->set('role_id', $row['role_id']);
 
         // Check whether can allow to view index
-        if (!$this->isAllowed()) {
-            $this->eventManager()->dispatch($eventName, $event);
+        if (!$this->isGranted()) {
+            $this->dispatch($eventName, $event);
 
             return false;
         }
@@ -570,33 +570,22 @@ class Acl extends Di
      *
      * @return null|array role id's array on success, and null on failure
      **/
-    public function getRoleGrants($userid)
+    public function getUserRoleGrants($userid)
     {
         if (!$userid) {
             return [];
         }
 
         if ($this->config('auth.role_id')) {
-            $role_id = $this->getUserRoles($userid);
-
-            $rows = $this->database->find('#__user_roles', 'all', [
-                'conditions' => ['role_id' => $role_id],
-            ]);
+            $roles = $this->getUserRoles($userid);
         } else {
-            $joins   = [];
-            $joins[] = [
-                'table'      => '#__user_roles',
-                'alias'      => 'r',
-                'type'       => 'INNER',
-                'conditions' => ['ur.role_id = r.role_id'],
-            ];
-
-            $rows = $this->database->find('#__user_to_role', 'all', [
-                'alias'      => 'ur',
-                'conditions' => ['ur.user_id' => $userid],
-                'joins'      => $joins,
-            ]);
+            $roles = $this->getUserRoles($userid);
         }
+
+        $rows = $this->database->find('#__user_roles', 'all', [
+            'conditions' => ['role_id' => $roles],
+            'fields'     => ['grants'],
+        ]);
 
         $grants = ['include' => [], 'exclude' => []];
 
@@ -690,7 +679,7 @@ class Acl extends Di
 
         if ($userid) {
             $grants['user'] = array_merge($grants['user'], $this->getUserGrants($userid));
-            $grants['role'] = array_merge($grants['role'], $this->getRoleGrants($userid));
+            $grants['role'] = array_merge($grants['role'], $this->getUserRoleGrants($userid));
         }
 
         return $grants;
@@ -702,7 +691,7 @@ class Acl extends Di
      * @params string $component,$view,$task
      * returns true or false
      **/
-    public function isAllowed($rule = 'home', $userid = null)
+    public function isGranted($rule = 'home', $userid = null)
     {
         $userid = ($userid) ? $userid : $this->get('userid');
 
@@ -716,13 +705,13 @@ class Acl extends Di
         $perms = $grants['user'];
         if ($perms && is_array($perms)) {
             if (is_array($perms['exclude'])) {
-                if ($this->isPermitted($rule, $perms['exclude'])) {
+                if ($this->hasGranted($rule, $perms['exclude'])) {
                     return false;
                 }
             }
 
             if (is_array($perms['include'])) {
-                if ($this->isPermitted($rule, $perms['include'])) {
+                if ($this->hasGranted($rule, $perms['include'])) {
                     return true;
                 }
             }
@@ -731,13 +720,13 @@ class Acl extends Di
         $perms = $grants['role'];
         if ($perms && is_array($perms)) {
             if (is_array($perms['exclude'])) {
-                if ($this->isPermitted($rule, $perms['exclude'])) {
+                if ($this->hasGranted($rule, $perms['exclude'])) {
                     return false;
                 }
             }
 
             if (is_array($perms['include'])) {
-                if ($this->isPermitted($rule, $perms['include'])) {
+                if ($this->hasGranted($rule, $perms['include'])) {
                     return true;
                 }
             }
@@ -746,13 +735,13 @@ class Acl extends Di
         $perms = $grants['public'];
         if ($perms && is_array($perms)) {
             if (is_array($perms['exclude'])) {
-                if ($this->isPermitted($rule, $perms['exclude'])) {
+                if ($this->hasGranted($rule, $perms['exclude'])) {
                     return false;
                 }
             }
 
             if (is_array($perms['include'])) {
-                if ($this->isPermitted($rule, $perms['include'])) {
+                if ($this->hasGranted($rule, $perms['include'])) {
                     return true;
                 }
             }
@@ -761,7 +750,7 @@ class Acl extends Di
         return false;
     }
 
-    public function isPermitted($rule = 'home', $grants = [])
+    public function hasGranted($rule = 'home', $grants = [])
     {
         $rule = trim($rule, '.');
         $rule = $rule ?: 'home';

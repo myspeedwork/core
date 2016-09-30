@@ -11,14 +11,21 @@
 
 namespace Speedwork\Core;
 
+use Speedwork\Console\Kernel;
 use Speedwork\Container\BootableInterface;
 use Speedwork\Container\Container;
 use Speedwork\Container\EventListenerInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Event\PostResponseEvent;
+use Symfony\Component\HttpKernel\HttpKernelInterface;
+use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\HttpKernel\TerminableInterface;
 
 /**
  * @author sankar <sankar.suda@gmail.com>
  */
-class Application extends Container
+class Application extends Container implements HttpKernelInterface, TerminableInterface
 {
     /**
      * The Speedwork framework version.
@@ -33,6 +40,13 @@ class Application extends Container
      * @var bool
      */
     protected $booted = false;
+
+    /**
+     * Indicates if the application has been bootstrapped before.
+     *
+     * @var bool
+     */
+    protected $bootstrapped = false;
 
     /**
      * The base path for the installation.
@@ -224,13 +238,6 @@ class Application extends Container
     }
 
     /**
-     * Terminate the application.
-     */
-    public function terminate()
-    {
-    }
-
-    /**
      * Get the application namespace.
      *
      * @throws \RuntimeException
@@ -243,6 +250,70 @@ class Application extends Container
             return $this->namespace;
         }
 
-        return 'System\\';
+        return 'App\\';
+    }
+
+    /**
+     * Run the given array of bootstrap classes.
+     *
+     * @param array $bootstrappers
+     */
+    public function bootstrap(array $bootstrappers)
+    {
+        if ($this->bootstrapped) {
+            return;
+        }
+
+        $this->registerConfiguredProviders();
+
+        $this->bootstrapped = true;
+
+        foreach ($bootstrappers as $bootstrapper) {
+            if (is_string($bootstrapper) && strpos($bootstrapper, '\\') !== false) {
+                $bootstrapper = new $bootstrapper();
+            }
+            $bootstrapper->bootstrap($this);
+        }
+    }
+
+    /**
+     * Determine if the application has been bootstrapped before.
+     *
+     * @return bool
+     */
+    public function isBootStrapped()
+    {
+        return $this->bootstrapped;
+    }
+
+    /**
+     * Register all of the configured providers.
+     */
+    public function registerConfiguredProviders()
+    {
+        $providers = $this['config']->get('app.providers');
+        if (is_array($providers)) {
+            foreach ($providers as $provider) {
+                $this->register($provider);
+            }
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function handle(Request $request, $type = self::MASTER_REQUEST, $catch = true)
+    {
+        $this['kernel'] = new Kernel($this);
+
+        return $this['kernel']->handle($request, $type, $catch);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function terminate(Request $request, Response $response)
+    {
+        $this['events']->dispatch(KernelEvents::TERMINATE, new PostResponseEvent($this, $request, $response));
     }
 }
