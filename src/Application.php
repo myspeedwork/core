@@ -166,30 +166,32 @@ class Application extends Container implements HttpKernelInterface, TerminableIn
     protected function bindPathsInContainer()
     {
         $paths = [
-            'env'      => '.env',
-            'base'     => '',
-            'config'   => 'config'.DS,
-            'public'   => 'public'.DS,
-            'static'   => 'public'.DS.'static'.DS,
-            'images'   => 'public'.DS.'uploads'.DS,
-            'themes'   => 'public'.DS.'themes'.DS,
-            'upload'   => 'public'.DS.'uploads'.DS,
-            'media'    => 'public'.DS.'uploads'.DS.'media'.DS,
-            'users'    => 'public'.DS.'uploads'.DS.'users'.DS,
-            'email'    => 'public'.DS.'email'.DS,
-            'pcache'   => 'public'.DS.'cache'.DS,
-            'storage'  => 'storage'.DS,
-            'tmp'      => 'storage'.DS.'tmp'.DS,
-            'cache'    => 'storage'.DS.'cache'.DS,
-            'logs'     => 'storage'.DS.'logs'.DS,
-            'log'      => 'storage'.DS.'logs'.DS,
-            'lang'     => 'storage'.DS.'lang'.DS,
-            'views'    => 'storage'.DS.'views'.DS,
-            'database' => 'storage'.DS.'database'.DS,
+            'env'        => '.env',
+            'base'       => '',
+            'config'     => 'config'.DS,
+            'public'     => 'public'.DS,
+            'static'     => 'public'.DS.'static'.DS,
+            'assets'     => 'public'.DS.'assets'.DS,
+            'images'     => 'public'.DS.'uploads'.DS,
+            'themes'     => 'public'.DS.'themes'.DS,
+            'upload'     => 'public'.DS.'uploads'.DS,
+            'media'      => 'public'.DS.'uploads'.DS.'media'.DS,
+            'users'      => 'public'.DS.'uploads'.DS.'users'.DS,
+            'email'      => 'public'.DS.'email'.DS,
+            'pcache'     => 'public'.DS.'cache'.DS,
+            'storage'    => 'storage'.DS,
+            'tmp'        => 'storage'.DS.'tmp'.DS,
+            'cache'      => 'storage'.DS.'cache'.DS,
+            'logs'       => 'storage'.DS.'logs'.DS,
+            'log'        => 'storage'.DS.'logs'.DS,
+            'lang'       => 'storage'.DS.'lang'.DS,
+            'views'      => 'storage'.DS.'views'.DS,
+            'database'   => 'storage'.DS.'database'.DS,
+            'migrations' => 'storage'.DS.'database'.DS.'migrations'.DS,
         ];
 
-        $this->set('path', $this->basePath().'system'.DS);
-        $this->paths['path'] = $this->basePath().'system'.DS;
+        $this->set('path', $this->basePath().'app'.DS);
+        $this->paths['path'] = $this->basePath().'app'.DS;
 
         foreach ($paths as $name => $path) {
             $this->set('path.'.$name, $this->basePath().$path);
@@ -209,7 +211,7 @@ class Application extends Container implements HttpKernelInterface, TerminableIn
     public function getPath($name = null)
     {
         if ($name) {
-            return $this->paths[$name];
+            return $this->paths['path.'.$name];
         }
 
         return $this->paths;
@@ -274,6 +276,26 @@ class Application extends Container implements HttpKernelInterface, TerminableIn
             }
             $bootstrapper->bootstrap($this);
         }
+    }
+
+    /**
+     * Determine if configutation is cached.
+     *
+     * @return bool
+     */
+    public function isConfigCached()
+    {
+        return file_exists($this->paths['path.cache'].'config.php');
+    }
+
+    /**
+     * Determine is php files are  in compiled state.
+     *
+     * @return bool
+     */
+    public function isCompiled()
+    {
+        return file_exists($this->paths['path.cache'].'compiled.php');
     }
 
     /**

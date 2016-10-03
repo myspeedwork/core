@@ -20,12 +20,12 @@ trait ResolverTrait
 {
     public function getController($name, $options = [])
     {
-        return $this->get('resolver')->requestController($name, $options);
+        return $this->get('resolver')->getController($name, $options);
     }
 
     public function getModel($name)
     {
-        return $this->get('resolver')->requestModel($name);
+        return $this->get('resolver')->getModel($name);
     }
 
     public function action($name, &$options = [])
@@ -33,7 +33,7 @@ trait ResolverTrait
         echo $this->get('resolver')->component($name, $options);
     }
 
-    public function getMomponent($name, &$options = [])
+    public function getComponent($name, &$options = [])
     {
         return $this->get('resolver')->component($name, $options);
     }

@@ -53,10 +53,14 @@ class Resolver extends Di
         ];
     }
 
-    protected function getViewPath($option, $type = 'component')
+    protected function getViewPath($route, $type = 'component')
     {
-        $path  = $this->getPath($option, $type);
-        $views = (is_array($path['views'])) ? $path['views'] : [$path['views']];
+        list($option, $view) = explode('.', $route);
+        unset($view);
+
+        $path    = $this->getPath($option, $type);
+        $views   = (is_array($path['views'])) ? $path['views'] : [$path['views']];
+        $views[] = THEME.$type.DS.strtolower($option);
 
         return $views;
     }
@@ -70,15 +74,14 @@ class Resolver extends Di
         return $namespace;
     }
 
-    public function loadController($name, $options = [], $instance = false)
+    public function loadController($route, $options = [], $instance = false)
     {
-        if (empty($name)) {
+        if (empty($route)) {
             return false;
         }
 
-        list($option, $view) = explode('.', $name);
+        list($option, $view) = explode('.', $route);
 
-        $option    = $this->sanitize($option);
         $signature = 'controller.'.$option;
 
         if (!$this->has($signature)) {
@@ -91,7 +94,7 @@ class Resolver extends Di
 
             $controller = new $class();
             $controller->setContainer($this->getContainer());
-            $controller->{'model'} = $this->loadModel($option);
+            $controller->setModel($this->getModel($option));
 
             $this->set($signature, $controller);
         } else {
@@ -131,7 +134,7 @@ class Resolver extends Di
         return $response;
     }
 
-    protected function loadModel($option)
+    protected function getModel($option)
     {
         $option    = $this->sanitize($option);
         $signature = 'model.'.$option;
@@ -161,25 +164,28 @@ class Resolver extends Di
         return $model;
     }
 
-    protected function findView($name, $type = 'component')
+    protected function findView($route, $type = 'component')
     {
-        list($option, $view) = explode('.', $name, 2);
+        list($option, $layout) = explode(':', $route);
+        list($option, $view)   = explode('.', $option);
 
-        $option = $this->sanitize($option);
-        $type   = $type ?: 'component';
-        $folder = ($type == 'component') ? 'Components' : 'Modules';
+        $type = $type ?: 'component';
 
-        $paths = $this->getViewPath($option, $type);
-        $view  = explode('.', trim($view));
+        $paths  = $this->getViewPath($option.'.'.$view, $type);
+        $layout = $layout ? explode('.', $layout) : '';
 
         $extensions = $this->config('view.extensions');
         $extensions = $extensions ?: ['tpl'];
 
-        $views   = [];
-        $views[] = THEME.strtolower($folder).DS.strtolower($option).DS.((!empty($view[0])) ? implode(DS, $view) : 'index');
+        if (!empty($layout)) {
+            $template = implode(DS, $layout);
+        } else {
+            $template = $view ?: 'index';
+        }
 
+        $views = [];
         foreach ($paths as $path) {
-            $views[] = $path.DS.'views'.DS.((!empty($view[0])) ? implode(DS, $view) : 'index');
+            $views[] = $path.DS.'views'.DS.$template;
         }
 
         foreach ($views as $file) {
@@ -193,9 +199,9 @@ class Resolver extends Di
         }
     }
 
-    public function loadView($name, $data = [], $type = 'component')
+    public function loadView($route, $data = [], $type = 'component')
     {
-        $view = $this->findView($name, $type);
+        $view = $this->findView($route, $type);
         if (empty($view)) {
             return;
         }
@@ -203,9 +209,9 @@ class Resolver extends Di
         return $this->get('view.engine')->create($view, $data)->render();
     }
 
-    public function requestLayout($name, $type = 'component')
+    public function requestLayout($route, $type = 'component')
     {
-        $view = $this->findView($name, $type);
+        $view = $this->findView($route, $type);
         if (empty($view)) {
             return $this->findView('errors');
         }
@@ -247,14 +253,9 @@ class Resolver extends Di
         return $instance;
     }
 
-    public function requestController($name, $options = [])
+    public function getController($name, $options = [])
     {
         return $this->loadController($name, $options, 2);
-    }
-
-    public function requestModel($name)
-    {
-        return $this->loadModel($name);
     }
 
     public function requestAction($name, $options = [])
@@ -262,14 +263,17 @@ class Resolver extends Di
         return $this->component($name, $options);
     }
 
-    public function component($name, $options = [])
+    public function component($route, $options = [])
     {
-        $response = $this->loadController($name, $options);
+        $response = $this->loadController($route, $options);
         if (!is_array($response)) {
             $response = [];
         }
 
-        $view = $this->findView($name, 'component');
+        $view = $this->findView($route, 'component');
+        if (empty($view)) {
+            return;
+        }
 
         return $this->get('view.engine')->create($view, $response)->render();
     }
@@ -294,15 +298,15 @@ class Resolver extends Di
             return $this->get($signature);
         }
 
-        list($helper, $component) = explode('.', $name);
-        list($component, $group)  = explode(':', $component);
+        list($helper, $group)  = explode(':', $name);
+        list($helper, $option) = explode('.', $helper);
 
         $paths       = [];
         $helperClass = ucfirst($helper);
 
-        if ($component) {
-            $component = $this->sanitize($component);
-            $namespace = $this->getNameSpace($component);
+        if ($option) {
+            $option    = $this->sanitize($option);
+            $namespace = $this->getNameSpace($option);
 
             $paths[] = [
                 'class' => $namespace.'Helpers\\'.(($group) ? $group.'\\' : '').$helperClass,
@@ -348,20 +352,21 @@ class Resolver extends Di
      * Include widget.
      *
      * @param string     $widget
-     * @param (optional) $component
+     * @param (optional) $option
      **/
     public function widget($name, $options = [], $includeOnly = false)
     {
         $signature = 'widget.'.strtolower($name);
 
         if (!$this->has($signature)) {
-            list($widget, $view, $component) = explode('.', $name);
+            list($widget, $option) = explode(':', $name);
+            list($widget, $view)   = explode('.', $widget);
 
             $class = ($view) ? $view : $widget;
             $class = ucfirst($class);
 
-            if ($component) {
-                $namespace = $this->getNameSpace($component);
+            if ($option) {
+                $namespace = $this->getNameSpace($option);
 
                 $paths[] = [
                     'class' => $namespace.'Widgets\\'.ucfirst($widget).'\\'.$class,

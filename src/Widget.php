@@ -95,12 +95,12 @@ abstract class Widget extends Di
     {
         //Add Scripts
         foreach ($this->scripts as $script) {
-            $this->get('assets')->addScript($script, 'bower');
+            $this->get('assets')->addScript('static::'.$script);
         }
 
         //Add Styles
         foreach ($this->styles as $style) {
-            $this->get('assets')->addStyleSheet($style, 'bower');
+            $this->get('assets')->addStyleSheet('static::'.$style);
         }
 
         $selectors = [];

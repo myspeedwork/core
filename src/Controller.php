@@ -22,8 +22,15 @@ class Controller extends Di
     use ResolverTrait;
     use RequestTrait;
 
-    public function ajaxRequest($url, $total = 0, $params = [])
+    /**
+     * Model object.
+     *
+     * @var /Speedwork/Core/Model
+     */
+    protected $model;
+
+    public function setModel(Model $model)
     {
-        return $this->ajax($url, $total, $params);
+        $this->model = $model;
     }
 }
