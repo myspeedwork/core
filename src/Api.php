@@ -11,28 +11,9 @@
 
 namespace Speedwork\Core;
 
-use Speedwork\Core\Traits\ResolverTrait;
-
 /**
  * @author sankar <sankar.suda@gmail.com>
  */
-class Api extends Di
+class Api extends Controller
 {
-    use ResolverTrait;
-
-    protected $data = [];
-
-    /**
-     * store status value.
-     *
-     * @var array
-     */
-    public $status = [];
-
-    public function setData($data)
-    {
-        $this->data = $data;
-
-        return $this;
-    }
 }

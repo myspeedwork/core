@@ -11,10 +11,10 @@
 
 namespace Speedwork\Core;
 
-use Speedwork\Console\Kernel;
 use Speedwork\Container\BootableInterface;
 use Speedwork\Container\Container;
 use Speedwork\Container\EventListenerInterface;
+use Speedwork\Core\Http\Kernel;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\PostResponseEvent;
@@ -100,6 +100,16 @@ class Application extends Container implements HttpKernelInterface, TerminableIn
     }
 
     /**
+     * Determine request is api.
+     *
+     * @return bool
+     */
+    public function isApi()
+    {
+        return $this['is_api_request'];
+    }
+
+    /**
      * Determine if the application has booted.
      *
      * @return bool
@@ -120,6 +130,10 @@ class Application extends Container implements HttpKernelInterface, TerminableIn
         if ($this->booted) {
             return;
         }
+
+        $this['env']     = $this['config']->get('app.env');
+        $this['debug']   = $this['config']->get('app.debug');
+        $this['charset'] = $this['config']->get('app.charset');
 
         $this->booted = true;
 
@@ -169,6 +183,7 @@ class Application extends Container implements HttpKernelInterface, TerminableIn
             'env'        => '.env',
             'base'       => '',
             'config'     => 'config'.DS,
+            'vendor'     => 'vendor'.DS,
             'public'     => 'public'.DS,
             'static'     => 'public'.DS.'static'.DS,
             'assets'     => 'public'.DS.'assets'.DS,

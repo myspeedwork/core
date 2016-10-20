@@ -11,6 +11,8 @@
 
 namespace Speedwork\Core\Traits;
 
+use Speedwork\Util\Utility;
+
 /**
  * Short methods to add default conditions to query.
  *
@@ -18,7 +20,15 @@ namespace Speedwork\Core\Traits;
  */
 trait FilterTrait
 {
-    public function conditions(&$data = [], $alias = null)
+    /**
+     * Add Filters to database query builder.
+     *
+     * @param array  $data
+     * @param string $alias
+     *
+     * @return array Database conditions
+     */
+    public function conditions($data = [], $alias = null)
     {
         $conditions = [];
 
@@ -184,7 +194,15 @@ trait FilterTrait
         return $conditions;
     }
 
-    public function ordering(&$data = [], $ordering = [])
+    /**
+     * Add Ordering to query.
+     *
+     * @param array &$data
+     * @param array $ordering
+     *
+     * @return array
+     */
+    public function ordering($data = [], $ordering = [])
     {
         if ($data['sort']) {
             if (empty($data['order'])) {
@@ -196,8 +214,29 @@ trait FilterTrait
         return $ordering;
     }
 
+    /**
+     * Cleanup the give column.
+     *
+     * @param string $string Database column
+     *
+     * @return string Cleaned string
+     */
     protected function cleanField($string)
     {
         return preg_replace("/[^\w\.\s]/", '', $string);
+    }
+
+    /**
+     * Convert time to proper format.
+     *
+     * @param string $time
+     * @param bool   $date
+     * @param string $format
+     *
+     * @return string
+     */
+    public function toTime($time, $date = false, $format = 'Y-m-d')
+    {
+        return Utility::strtotime($time, $date, $format);
     }
 }

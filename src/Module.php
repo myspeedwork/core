@@ -11,7 +11,7 @@
 
 namespace Speedwork\Core;
 
-use Speedwork\Core\Traits\RequestTrait;
+use Speedwork\Core\Traits\HttpTrait;
 use Speedwork\Core\Traits\ResolverTrait;
 
 /**
@@ -20,5 +20,5 @@ use Speedwork\Core\Traits\ResolverTrait;
 class Module extends Di
 {
     use ResolverTrait;
-    use RequestTrait;
+    use HttpTrait;
 }

@@ -14,8 +14,6 @@ namespace Speedwork\Core;
 use Speedwork\Core\Traits\CapsuleManagerTrait;
 use Speedwork\Core\Traits\EventDispatcherTrait;
 use Speedwork\Core\Traits\FilterTrait;
-use Speedwork\Util\Utility;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 
 /**
  * @author sankar <sankar.suda@gmail>
@@ -27,10 +25,12 @@ class Di
     use FilterTrait;
 
     /**
-     * Helper fuction for configuration read and write.
+     * Read and write onfiguration.
      *
-     * @param mixed $key     [description]
-     * @param mixed $default [description]
+     * @param string $key
+     * @param mixed  $default
+     *
+     * @return mixed
      */
     public function config($key = null, $default = null)
     {
@@ -45,6 +45,14 @@ class Di
         return $this->get('config')->get($key, $default);
     }
 
+    /**
+     * Assign key value pairs to view.
+     *
+     * @param string $key
+     * @param mixed  $value
+     *
+     * @return \Speedwork\Core\Di
+     */
     public function assign($key, $value)
     {
         $this->get('engine')->assign($key, $value);
@@ -52,6 +60,13 @@ class Di
         return $this;
     }
 
+    /**
+     * Retrive item from view.
+     *
+     * @param string $key
+     *
+     * @return mixed
+     */
     public function release($key)
     {
         return $this->get('engine')->release($key);
@@ -72,50 +87,6 @@ class Di
     }
 
     /**
-     * Redirect the url.
-     *
-     * @param [type] $url  [description]
-     * @param int    $time [description]
-     * @param bool   $html [description]
-     *
-     * @return [type] [description]
-     */
-    public function redirect($url, $status = 302, $rewrite = true)
-    {
-        if (empty($url)) {
-            $url = 'index.php';
-        }
-
-        if ($rewrite) {
-            $url = $this->link($url);
-        }
-
-        $ajax = $this->get('is_ajax_request');
-        if ($ajax) {
-            $status = $this->release('status');
-
-            $status['redirect'] = $url;
-            $this->assign('status', $status);
-            $this->assign('redirect', $url);
-            $this->set('redirect', $url);
-
-            return true;
-        }
-
-        return new RedirectResponse($url, $status);
-    }
-
-    public function link($url)
-    {
-        return Router::link($url);
-    }
-
-    public function toTime($time, $date = false, $format = 'Y-m-d')
-    {
-        return Utility::strtotime($time, $date, $format);
-    }
-
-    /**
      * Short method to get resolver.
      *
      * @return \Speedwork\Core\Resolver Resolver object
@@ -123,5 +94,17 @@ class Di
     public function resolver()
     {
         return $this->get('resolver');
+    }
+
+    /**
+     * Generate Proper link.
+     *
+     * @param string $url
+     *
+     * @return string
+     */
+    public function link($url)
+    {
+        return Router::link($url);
     }
 }

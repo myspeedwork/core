@@ -14,7 +14,10 @@ namespace Speedwork\Core\Http;
 use Exception;
 use Speedwork\Container\Container;
 use Symfony\Component\HttpFoundation\Exception\ConflictingHeadersException;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\FilterResponseEvent;
 use Symfony\Component\HttpKernel\Event\FinishRequestEvent;
 use Symfony\Component\HttpKernel\Event\GetResponseEvent;
@@ -92,9 +95,6 @@ class Kernel implements KernelInterface, HttpKernelInterface
      * @param Request $request A Request instance
      * @param int     $type    The type of the request (one of HttpKernelInterface::MASTER_REQUEST or HttpKernelInterface::SUB_REQUEST)
      *
-     * @throws \LogicException       If one of the listener does not behave as expected
-     * @throws NotFoundHttpException When controller cannot be found
-     *
      * @return Response A Response instance
      */
     protected function handleRaw(Request $request)
@@ -107,13 +107,29 @@ class Kernel implements KernelInterface, HttpKernelInterface
             return $this->filterResponse($event->getResponse(), $request, $type);
         }
 
-        $response = $this->getApplication()->get('template')->render();
+        $response = $this->renderRequest($request);
 
-        if (!$response instanceof Response) {
+        if (is_array($response)) {
+            $response = new JsonResponse($response);
+        } elseif ($response instanceof RedirectResponse) {
+            $response = $response->getResponse();
+        } elseif (!$response instanceof Response) {
             $response = new Response($response);
         }
 
         return $this->filterResponse($response, $request, $type);
+    }
+
+    /**
+     * Render the request.
+     *
+     * @param Request $request
+     *
+     * @return string|array
+     */
+    protected function renderRequest(Request $request)
+    {
+        return $this->getApplication()->get('template')->render();
     }
 
     /**
@@ -126,7 +142,7 @@ class Kernel implements KernelInterface, HttpKernelInterface
      * @param Request $request
      * @param int     $type
      */
-    private function finishRequest(Request $request, $type)
+    protected function finishRequest(Request $request, $type)
     {
         $this->app['events']->dispatch(KernelEvents::FINISH_REQUEST, new FinishRequestEvent($this, $request, $type));
     }
@@ -142,8 +158,18 @@ class Kernel implements KernelInterface, HttpKernelInterface
      *
      * @return Response The filtered Response instance
      */
-    private function filterResponse(Response $response, Request $request, $type)
+    protected function filterResponse(Response $response, Request $request, $type)
     {
+        $headers = $request->getResponseHeader();
+        foreach ($headers as $key => $value) {
+            $response->headers->set($key, $value[0], $value[1]);
+        }
+
+        $cookies = $request->getResponseCookie();
+        foreach ($cookies as $cookie) {
+            $response->headers->setCookie($cookie);
+        }
+
         $event = new FilterResponseEvent($this, $request, $type, $response);
 
         $this->app['events']->dispatch(KernelEvents::RESPONSE, $event);
@@ -186,7 +212,7 @@ class Kernel implements KernelInterface, HttpKernelInterface
      *
      * @return Response A Response instance
      */
-    private function handleException(Exception $e, $request, $type)
+    protected function handleException(Exception $e, $request, $type)
     {
         $event = new GetResponseForExceptionEvent($this, $request, $type, $e);
         $this->app['events']->dispatch(KernelEvents::EXCEPTION, $event);

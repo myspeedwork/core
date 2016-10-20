@@ -11,13 +11,22 @@
 
 namespace Speedwork\Core;
 
+use Speedwork\Core\Traits\HttpTrait;
+
 /**
  * @author sankar <sankar.suda@gmail.com>
  */
 class Acl extends Di
 {
+    use HttpTrait;
+
     protected $grants = [];
 
+    /**
+     * Get column names used for login.
+     *
+     * @return array
+     */
     public function getLoginFields()
     {
         $fields = $this->config('auth.account.login_fields');
@@ -32,6 +41,13 @@ class Acl extends Di
         return $fields;
     }
 
+    /**
+     * Populate the database condition based login columns.
+     *
+     * @param string $username
+     *
+     * @return array
+     */
     protected function getMatches($username)
     {
         $username = strtolower(trim($username));
@@ -52,7 +68,7 @@ class Acl extends Di
      */
     protected function hasCookies()
     {
-        if (empty($this->cookie[COOKIE_NAME]) || empty($this->cookie[COOKIE_KEY])) {
+        if (empty($this->cookie(COOKIE_NAME)) || empty($this->cookie(COOKIE_KEY))) {
             return false;
         }
 
@@ -60,7 +76,7 @@ class Acl extends Di
     }
 
     /**
-     * Check any exising sessions aviable from last login.
+     * Check any exising sessions avialable.
      *
      * @return boolen [description]
      */
@@ -76,21 +92,24 @@ class Acl extends Di
     /**
      * Check the current user is logged in.
      *
-     * @return bool [description]
+     * @return bool
      */
     public function isUserLoggedIn()
     {
         if ($this->hasCookies()) {
-            if (!$this->checkIsUserLoggedIn($this->cookie[COOKIE_NAME], $this->cookie[COOKIE_KEY])) {
+            if (!$this->checkIsUserLoggedIn(
+                $this->cookie(COOKIE_NAME),
+                $this->cookie(COOKIE_KEY)
+            )) {
                 $this->logout();
 
                 return false;
             } else {
                 if (!$this->hasSessions()) {
-                    $this->get('session')->set(COOKIE_NAME, $this->cookie[COOKIE_NAME]);
-                    $this->get('session')->set(COOKIE_KEY, $this->cookie[COOKIE_KEY]);
-                } elseif (strcmp($this->cookie[COOKIE_NAME], $this->get('session')->get(COOKIE_NAME))
-                    || strcmp($this->cookie[COOKIE_KEY], $this->get('session')->get(COOKIE_KEY))) {
+                    $this->setSession(COOKIE_NAME, $this->cookie(COOKIE_NAME));
+                    $this->setSession(COOKIE_KEY, $this->cookie(COOKIE_KEY));
+                } elseif (strcmp($this->cookie(COOKIE_NAME), $this->getSession(COOKIE_NAME))
+                    || strcmp($this->cookie(COOKIE_KEY), $this->getSession(COOKIE_KEY))) {
                     $this->logout();
 
                     return false;
@@ -99,8 +118,14 @@ class Acl extends Di
                 return true;
             }
         }
+
         if ($this->hasSessions()) {
-            if (!$this->checkIsUserLoggedIn($this->get('session')->get(COOKIE_NAME), $this->get('session')->get(COOKIE_KEY))) {
+            if (!$this->checkIsUserLoggedIn(
+                $this->getSession(COOKIE_NAME),
+                $this->getSession(COOKIE_KEY)
+            )) {
+                $this->logout();
+
                 return false;
             }
 
@@ -111,12 +136,12 @@ class Acl extends Di
     }
 
     /**
-     * Check the user login.
+     * Check whether logged in user is valid or not.
      *
-     * @param [type] $email    [description]
-     * @param [type] $user_key [description]
+     * @param string $username
+     * @param string $user_key
      *
-     * @return [type] [description]
+     * @return bool
      */
     protected function checkIsUserLoggedIn($username, $user_key)
     {
@@ -130,8 +155,13 @@ class Acl extends Di
         if (empty($row['userid'])) {
             return false;
         }
+
         // check if passwords match
         if (strcmp($user_key, $row['password'])) {
+            return false;
+        }
+
+        if ($row['status'] != 1) {
             return false;
         }
 
@@ -213,22 +243,22 @@ class Acl extends Di
             return false;
         }
 
-        $this->get('session')->set(COOKIE_NAME, $username);
-        $this->get('session')->set(COOKIE_KEY, $key);
+        $this->setSession(COOKIE_NAME, $username);
+        $this->setSession(COOKIE_KEY, $key);
 
         $this->sets('username', $username);
         $this->sets('user', $row);
 
         if ($remember) {
-            setcookie(COOKIE_NAME, $username, time() + COOKIE_TIME, COOKIE_PATH);
-            setcookie(COOKIE_KEY, $key, time() + COOKIE_TIME, COOKIE_PATH);
+            $this->setCookie(COOKIE_NAME, $username, time() + COOKIE_TIME);
+            $this->setCookie(COOKIE_KEY, $key, time() + COOKIE_TIME);
         }
 
         $this->database->update('#__users', [
             'last_signin' => time(),
-            'ip'          => env('REMOTE_ADDR'),
-            ], ['userid'  => $userid,
-        ]);
+            'ip'          => ip(),
+            ], ['userid' => $userid]
+        );
 
         $row['plain_password'] = $password;
         //call the Event
@@ -285,6 +315,15 @@ class Acl extends Di
         return true;
     }
 
+    /**
+     * Verify is valid user based on username and password.
+     *
+     * @param string $username
+     * @param string $password
+     * @param bool   $hash     Is hashed password?
+     *
+     * @return bool
+     */
     public function isValidUser($username, $password = null, $hash = true)
     {
         $conditions   = [];
@@ -315,22 +354,29 @@ class Acl extends Di
         return $row;
     }
 
-    /*
-     This function logs the current user out
-    */
+    /**
+     * Logout the current logged in user.
+     *
+     * @return bool
+     */
     public function logout()
     {
-        //call the hooks
         $this->dispatch('members.before.logout');
         $this->get('session')->clear();
 
-        setcookie(COOKIE_NAME, '', time() - COOKIE_TIME, COOKIE_PATH);
-        setcookie(COOKIE_KEY, '', time() - COOKIE_TIME, COOKIE_PATH);
-        setcookie(COOKIE_UID, '', time() - COOKIE_TIME, COOKIE_PATH);
+        $this->setCookie(COOKIE_NAME, '', time() - COOKIE_TIME);
+        $this->setCookie(COOKIE_KEY, '', time() - COOKIE_TIME);
 
         return true;
     }
 
+    /**
+     * Determine provided password is valid.
+     *
+     * @param string $password
+     *
+     * @return bool
+     */
     public function isValidPassword($password)
     {
         $row = $this->database->find('#__users', 'first', [
@@ -347,6 +393,14 @@ class Acl extends Di
         return true;
     }
 
+    /**
+     * Update the user password with new one.
+     *
+     * @param string $new_password
+     * @param string $userid
+     *
+     * @return boolen
+     */
     public function updatePassword($new_password, $userid = null)
     {
         $new_password = salt(trim($new_password));
@@ -364,9 +418,9 @@ class Acl extends Di
 
         return $this->database->update('#__users', [
             'password'       => $new_password,
-            'last_pw_change' => time(), ], [
-            'userid'         => $userid,
-        ]);
+            'last_pw_change' => time(), ],
+            ['userid' => $userid]
+        );
     }
 
     public function resetPassword($username)
@@ -387,8 +441,8 @@ class Acl extends Di
             return false;
         }
 
-        $new_pass       = $this->generatePassword();
-        $activation_key = $this->generateActivationKey();
+        $new_pass       = $this->generateRandomKey();
+        $activation_key = $this->generateRandomKey();
 
         $new_md5 = salt($new_pass);
 
@@ -417,7 +471,7 @@ class Acl extends Di
      *
      * @return string The random password
      **/
-    public function generatePassword($length = 12, $special_chars = false)
+    public function generateRandomKey($length = 12, $special_chars = false)
     {
         $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         if ($special_chars) {
@@ -558,11 +612,6 @@ class Acl extends Di
         return substr(uniqid(rand(), true), 0, 10);
     }
 
-    public function generateActivationKey($length = 9)
-    {
-        return $this->generatePassword($length);
-    }
-
     /**
      * Get user Permissions.
      *
@@ -640,6 +689,13 @@ class Acl extends Di
         return array_merge(['include' => [], 'exclude' => []], (array) json_decode($row['grants'], true));
     }
 
+    /**
+     * Get the granted permissions for give user.
+     *
+     * @param string $userid userid for which grants required
+     *
+     * @return array All Allowed grants
+     */
     public function getGrants($userid = null)
     {
         // Every one get these grants
@@ -688,8 +744,9 @@ class Acl extends Di
     /**
      * Checking user is permitted to that component or view.
      *
-     * @params string $component,$view,$task
-     * returns true or false
+     * @param string $component,$view,$task
+     *
+     * @return true or false
      **/
     public function isGranted($rule = 'home', $userid = null)
     {
@@ -705,13 +762,13 @@ class Acl extends Di
         $perms = $grants['user'];
         if ($perms && is_array($perms)) {
             if (is_array($perms['exclude'])) {
-                if ($this->hasGranted($rule, $perms['exclude'])) {
+                if ($this->isGrantMatched($rule, $perms['exclude'])) {
                     return false;
                 }
             }
 
             if (is_array($perms['include'])) {
-                if ($this->hasGranted($rule, $perms['include'])) {
+                if ($this->isGrantMatched($rule, $perms['include'])) {
                     return true;
                 }
             }
@@ -720,13 +777,13 @@ class Acl extends Di
         $perms = $grants['role'];
         if ($perms && is_array($perms)) {
             if (is_array($perms['exclude'])) {
-                if ($this->hasGranted($rule, $perms['exclude'])) {
+                if ($this->isGrantMatched($rule, $perms['exclude'])) {
                     return false;
                 }
             }
 
             if (is_array($perms['include'])) {
-                if ($this->hasGranted($rule, $perms['include'])) {
+                if ($this->isGrantMatched($rule, $perms['include'])) {
                     return true;
                 }
             }
@@ -735,13 +792,13 @@ class Acl extends Di
         $perms = $grants['public'];
         if ($perms && is_array($perms)) {
             if (is_array($perms['exclude'])) {
-                if ($this->hasGranted($rule, $perms['exclude'])) {
+                if ($this->isGrantMatched($rule, $perms['exclude'])) {
                     return false;
                 }
             }
 
             if (is_array($perms['include'])) {
-                if ($this->hasGranted($rule, $perms['include'])) {
+                if ($this->isGrantMatched($rule, $perms['include'])) {
                     return true;
                 }
             }
@@ -750,7 +807,7 @@ class Acl extends Di
         return false;
     }
 
-    public function hasGranted($rule = 'home', $grants = [])
+    public function isGrantMatched($rule = 'home', $grants = [])
     {
         $rule = trim($rule, '.');
         $rule = $rule ?: 'home';

@@ -17,13 +17,30 @@ use Speedwork\Core\Traits\Macroable;
 use Speedwork\Util\Arr;
 use Speedwork\Util\Str;
 use SplFileInfo;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\ParameterBag;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
+/**
+ * @author Sankar <sankar.suda@gmail.com>
+ */
 class Request extends SymfonyRequest implements ArrayableInterface, ArrayAccess
 {
     use Macroable;
+
+    /**
+     * Response headers.
+     *
+     * @var \Symfony\Component\HttpFoundation\ParameterBag
+     */
+    protected $header;
+
+    /**
+     * Response cookies.
+     *
+     * @var \Symfony\Component\HttpFoundation\ParameterBag
+     */
+    protected $cookie;
 
     /**
      * The decoded JSON content for the request.
@@ -31,27 +48,6 @@ class Request extends SymfonyRequest implements ArrayableInterface, ArrayAccess
      * @var string
      */
     protected $json;
-
-    /**
-     * All of the converted files for the request.
-     *
-     * @var array
-     */
-    protected $convertedFiles;
-
-    /**
-     * The user resolver callback.
-     *
-     * @var \Closure
-     */
-    protected $userResolver;
-
-    /**
-     * The route resolver callback.
-     *
-     * @var \Closure
-     */
-    protected $routeResolver;
 
     /**
      * Return the Request instance.
@@ -162,7 +158,7 @@ class Request extends SymfonyRequest implements ArrayableInterface, ArrayAccess
      */
     public function pjax()
     {
-        return $this->headers->get('X-PJAX') == true;
+        return $this->headers->get('X-PJAX') === true;
     }
 
     /**
@@ -230,7 +226,7 @@ class Request extends SymfonyRequest implements ArrayableInterface, ArrayAccess
      */
     public function all()
     {
-        return array_replace_recursive($this->input(), $this->allFiles());
+        return array_replace_recursive($this->input(), $this->files());
     }
 
     /**
@@ -244,6 +240,9 @@ class Request extends SymfonyRequest implements ArrayableInterface, ArrayAccess
     public function input($key = null, $default = null)
     {
         $input = $this->getInputSource()->all() + $this->query->all();
+        if (is_null($key)) {
+            return $input;
+        }
 
         return data_get($input, $key, $default);
     }
@@ -339,50 +338,29 @@ class Request extends SymfonyRequest implements ArrayableInterface, ArrayAccess
     }
 
     /**
-     * Get an array of all of the files on the request.
+     * Retrieve a files from the request.
      *
-     * @return array
+     * @param string            $key
+     * @param string|array|null $default
+     *
+     * @return string|array
      */
-    public function allFiles()
+    public function files($key = null, $default = null)
     {
-        $files = $this->files->all();
-
-        return $this->convertedFiles
-                    ? $this->convertedFiles
-                    : $this->convertedFiles = $this->convertUploadedFiles($files);
+        return $this->retrieveItem('files', $key, $default, true);
     }
 
     /**
-     * Convert the given array of Symfony UploadedFiles to custom Laravel UploadedFiles.
+     * Retrieve a post items from the request.
      *
-     * @param array $files
+     * @param string            $key
+     * @param string|array|null $default
      *
-     * @return array
+     * @return string|array
      */
-    protected function convertUploadedFiles(array $files)
+    public function post($key = null, $default = null)
     {
-        return array_map(function ($file) {
-            if (is_null($file) || (is_array($file) && empty(array_filter($file)))) {
-                return $file;
-            }
-
-            return is_array($file)
-                        ? $this->convertUploadedFiles($file)
-                        : UploadedFile::createFromBase($file);
-        }, $files);
-    }
-
-    /**
-     * Retrieve a file from the request.
-     *
-     * @param string $key
-     * @param mixed  $default
-     *
-     * @return \Illuminate\Http\UploadedFile|array|null
-     */
-    public function file($key = null, $default = null)
-    {
-        return data_get($this->allFiles(), $key, $default);
+        return $this->retrieveItem('request', $key, $default);
     }
 
     /**
@@ -394,7 +372,7 @@ class Request extends SymfonyRequest implements ArrayableInterface, ArrayAccess
      */
     public function hasFile($key)
     {
-        if (!is_array($files = $this->file($key))) {
+        if (!is_array($files = $this->files($key))) {
             $files = [$files];
         }
 
@@ -582,7 +560,87 @@ class Request extends SymfonyRequest implements ArrayableInterface, ArrayAccess
             return $this->json;
         }
 
-        return data_get($this->json->all(), $key, $default);
+        return $this->json->get($key, $default);
+    }
+
+    /**
+     * Sets a header by name.
+     *
+     * @param string|array $key     The key
+     * @param string|array $values  The value or an array of values
+     * @param bool         $replace Whether to replace the actual value or not (true by default)
+     */
+    public function setHeader($key, $values = null, $replace = true)
+    {
+        if (!isset($this->header)) {
+            $this->header = new ParameterBag();
+        }
+
+        if (is_array($key)) {
+            foreach ($key as $baseKey => $baseValue) {
+                $this->header->set($baseKey, [$baseValue, $replace]);
+            }
+        } else {
+            $this->header->set($key, [$values, $replace]);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Sets a cookie.
+     *
+     * @param Cookie $cookie
+     */
+    public function setCookie(Cookie $cookie)
+    {
+        if (!isset($this->cookie)) {
+            $this->cookie = new ParameterBag();
+        }
+
+        $this->cookie->set($cookie->getName(), $cookie);
+
+        return $this;
+    }
+
+    /**
+     * Get the response header.
+     *
+     * @param string $key
+     *
+     * @return mixed
+     */
+    public function getResponseHeader($key = null, $default = null)
+    {
+        if (!isset($this->header)) {
+            $this->header = new ParameterBag();
+        }
+
+        if (is_null($key)) {
+            return $this->header->all();
+        }
+
+        return $this->header->get($key, $default);
+    }
+
+    /**
+     * Get the response header.
+     *
+     * @param string $key
+     *
+     * @return mixed
+     */
+    public function getResponseCookie($key = null, $default = null)
+    {
+        if (!isset($this->cookie)) {
+            $this->cookie = new ParameterBag();
+        }
+
+        if (is_null($key)) {
+            return $this->cookie->all();
+        }
+
+        return $this->cookie->get($key, $default);
     }
 
     /**

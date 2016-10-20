@@ -10,6 +10,7 @@
  */
 
 use Speedwork\Container\Container;
+use Speedwork\Util\Arr;
 use Speedwork\Util\Str;
 use Speedwork\Util\Utility;
 
@@ -172,4 +173,107 @@ function ip()
 function strtime($time, $date = false, $format = 'Y-m-d')
 {
     return Utility::strtotime($time, $date, $format);
+}
+
+/**
+ * Set an item on an array or object using dot notation.
+ *
+ * @param mixed        $target
+ * @param string|array $key
+ * @param mixed        $value
+ * @param bool         $overwrite
+ *
+ * @return mixed
+ */
+function data_set(&$target, $key, $value, $overwrite = true)
+{
+    $segments = is_array($key) ? $key : explode('.', $key);
+
+    if (($segment = array_shift($segments)) === '*') {
+        if (!Arr::accessible($target)) {
+            $target = [];
+        }
+
+        if ($segments) {
+            foreach ($target as &$inner) {
+                data_set($inner, $segments, $value, $overwrite);
+            }
+        } elseif ($overwrite) {
+            foreach ($target as &$inner) {
+                $inner = $value;
+            }
+        }
+    } elseif (Arr::accessible($target)) {
+        if ($segments) {
+            if (!Arr::exists($target, $segment)) {
+                $target[$segment] = [];
+            }
+
+            data_set($target[$segment], $segments, $value, $overwrite);
+        } elseif ($overwrite || !Arr::exists($target, $segment)) {
+            $target[$segment] = $value;
+        }
+    } elseif (is_object($target)) {
+        if ($segments) {
+            if (!isset($target->{$segment})) {
+                $target->{$segment} = [];
+            }
+
+            data_set($target->{$segment}, $segments, $value, $overwrite);
+        } elseif ($overwrite || !isset($target->{$segment})) {
+            $target->{$segment} = $value;
+        }
+    } else {
+        $target = [];
+
+        if ($segments) {
+            data_set($target[$segment], $segments, $value, $overwrite);
+        } elseif ($overwrite) {
+            $target[$segment] = $value;
+        }
+    }
+
+    return $target;
+}
+
+/**
+ * Get an item from an array or object using "dot" notation.
+ *
+ * @param mixed        $target
+ * @param string|array $key
+ * @param mixed        $default
+ *
+ * @return mixed
+ */
+function data_get($target, $key, $default = null)
+{
+    if (is_null($key)) {
+        return $target;
+    }
+
+    $key = is_array($key) ? $key : explode('.', $key);
+
+    while (($segment = array_shift($key)) !== null) {
+        if ($segment === '*') {
+            if ($target instanceof Collection) {
+                $target = $target->all();
+            } elseif (!is_array($target)) {
+                return Str::value($default);
+            }
+
+            $result = Arr::pluck($target, $key);
+
+            return in_array('*', $key) ? Arr::collapse($result) : $result;
+        }
+
+        if (Arr::accessible($target) && Arr::exists($target, $segment)) {
+            $target = $target[$segment];
+        } elseif (is_object($target) && isset($target->{$segment})) {
+            $target = $target->{$segment};
+        } else {
+            return Str::value($default);
+        }
+    }
+
+    return $target;
 }

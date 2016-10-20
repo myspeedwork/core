@@ -11,6 +11,7 @@
 
 namespace Speedwork\Core;
 
+use Speedwork\Core\Http\Request;
 use Speedwork\Util\Utility;
 use Speedwork\Util\Xml;
 
@@ -22,24 +23,45 @@ class RestApi extends Api
     protected $cache    = null;
     protected $useronly = false;
     protected $public   = [];
-    protected $request  = [];
+
+    protected $headers = [];
 
     public function setCache($cache = '+10 MINUTE')
     {
-        $this->cache = $cache;
+        if (is_string($cache)) {
+            $this->cache = $cache;
+        }
 
         return $this;
     }
 
-    public function setRequest($request)
+    public function change($request)
     {
-        $request['api_key'] = $request['api_key'] ?: env('HTTP_X_API_KEY');
-        $request['api_sig'] = $request['api_sig'] ?: env('HTTP_X_API_SIG');
-        $request['format']  = $request['format'] ?: $request['output'];
-        $request['format']  = $request['format'] ?: env('HTTP_X_API_FORMAT');
-        $request['method']  = $request['method'] ?: env('HTTP_X_API_METHOD');
-        $request['option']  = $request['option'] ?: env('HTTP_X_API_OPTION');
-        $request['view']    = $request['view'] ?: env('HTTP_X_API_VIEW');
+        $this->headers = [
+            'api_key'     => 'HTTP_X_AUTH_KEY',
+            'signature'   => 'HTTP_X_AUTH_SIGNATURE',
+            'auth_method' => 'HTTP_X_AUTH_METHOD',
+            'nonce'       => 'HTTP_X_API_NONCE',
+            'version'     => 'HTTP_X_API_VERSION',
+            'timestamp'   => 'HTTP_X_API_TIMESTAMP',
+            'format'      => 'HTTP_X_API_FORMAT',
+            'method'      => 'HTTP_X_API_METHOD',
+            'option'      => 'HTTP_X_API_OPTION',
+            'view'        => 'HTTP_X_API_VIEW',
+        ];
+
+        $auth = env('HTTP_AUTHORIZATION');
+        if ($auth) {
+            list($type, $auth)     = explode(' ', $auth);
+            list($key, $signature) = explode(':', $auth);
+
+            $request['api_key']   = $key;
+            $request['signature'] = $signature;
+        }
+
+        foreach ($this->headers as $key => $value) {
+            $request[$key] = $request[$key] ?: env($value);
+        }
 
         if ($request['option']) {
             $method = explode('.', strtolower($request['option']));
@@ -54,9 +76,7 @@ class RestApi extends Api
             $request['view']   = $method[1];
         }
 
-        $this->request = $request;
-
-        return $this;
+        return $request;
     }
 
     public function setPublicMethods($public = [])
@@ -83,27 +103,15 @@ class RestApi extends Api
         return $this;
     }
 
-    /**
-     * Functions to process given method.
-     *
-     * @param array &$request    Element array
-     * @param bool  $authenicate Flag to specify force authentication
-     * @param array $useronly    Username validation only
-     *
-     * @return none
-     **/
-    public function processMethod($authenicate = true)
+    public function processMethod()
     {
         $data   = [];
         $status = [];
-        $sig    = true;
 
         //if method found
-        if ($this->request['option']) {
+        if ($this->input('option')) {
             //validate Request
-            if ($authenicate) {
-                $sig = $this->authenticate(false);
-            }
+            $sig = $this->authenticate();
 
             if ($sig === true) {
                 return $this->process();
@@ -137,7 +145,7 @@ class RestApi extends Api
 
     protected function process()
     {
-        $app_api = ($this->request['app']) ? true : false;
+        $app_api = ($this->input('app')) ? true : false;
 
         if ($app_api) {
             return $this->processApp($request);
@@ -148,8 +156,8 @@ class RestApi extends Api
 
     public function processApi()
     {
-        $option = $this->request['option'];
-        $view   = $this->request['view'];
+        $option = $this->input('option');
+        $view   = $this->input('view');
 
         $data   = [];
         $status = [];
@@ -167,15 +175,13 @@ class RestApi extends Api
             return $this->outputFormat($status, $data);
         }
 
-        $controller->setData($this->request);
-
         return $this->formatResponse($controller->$method());
     }
 
     protected function processApp()
     {
-        $option = $this->request['option'];
-        $view   = $this->request['view'];
+        $option = $this->input('option');
+        $view   = $this->input('view');
 
         $status = [];
         $data   = [];
@@ -195,8 +201,6 @@ class RestApi extends Api
 
             return $this->outputFormat($status, $data);
         }
-
-        $controller->setData($this->request);
 
         return $this->formatResponse($controller->$method());
     }
@@ -278,13 +282,11 @@ class RestApi extends Api
      */
     public function output($output = null)
     {
-        $format   = strtolower($this->request['format']);
-        $name     = ($this->request['view']) ?: $this->request['option'];
-        $callback = $this->request['callback'];
+        $format   = strtolower($this->input('format'));
+        $name     = ($this->input('view')) ?: $this->input('option');
+        $callback = $this->input('callback');
 
-        $this->setRequest([]);
-
-        $this->setHeader($output['status'], $output['message']);
+        $this->setStatusCode($output['status'], $output['message']);
 
         switch ($format) {
             case 'none':
@@ -315,16 +317,7 @@ class RestApi extends Api
         }
     }
 
-    /**
-     * [authenticate description].
-     *
-     * @param [type] $request  [description]
-     * @param bool   $sig      [description]
-     * @param bool   $useronly [description]
-     *
-     * @return [type] [description]
-     */
-    protected function authenticate($sig = true)
+    protected function authenticate()
     {
         $public = [];
         if (is_array($this->public)) {
@@ -339,8 +332,8 @@ class RestApi extends Api
             ]);
         }
 
-        $option = $this->request['option'];
-        $view   = $this->request['view'];
+        $option = $this->input('option');
+        $view   = $this->input('view');
 
         $permissons = [
             $option.'.'.$view,
@@ -353,44 +346,40 @@ class RestApi extends Api
             }
         }
 
-        if (in_array($this->request['method'], $public)) {
+        if (in_array($this->input('method'), $public)) {
             return true;
         }
 
-        $api_key = $this->request['api_key'];
+        $api_key = $this->input('api_key');
         if (!$api_key) {
             return ['A402' => trans('Api Key not found')];
         }
 
         if ($this->cache) {
             $catch_key = 'api_cache_'.$api_key.'_'.ip();
-            $status    = $this->get('cache')->remember($catch_key, function () use ($sig) {
-                return $this->validate($sig);
+
+            $status = $this->get('cache')->remember($catch_key, function () {
+                return $this->validate();
             }, $this->cache);
         } else {
-            $status = $this->validate($sig);
+            $status = $this->validate();
         }
 
         if ($status['status'] == 'OK') {
-            if ($sig) {
-                $signature = $this->generateSignature($status['api_secret']);
+            $signature = $status['data']['signature'];
+            if ($signature) {
+                $signature = $this->signature($status['data']['api_secret']);
 
-                if (strcmp($this->request['api_sig'], $signature) != 0) {
+                if (strcmp($this->input('signature'), $signature) !== 0) {
                     return ['A408' => trans('Api Signature not equal')];
                 }
             }
 
-            $this->set('api_key', $status['data']['api_key']);
-            $this->set('user', $status['data']['user']);
-            $this->set('userid', $status['data']['userid']);
-            $this->set('is_user_logged_in', true);
-
-            $sets = $status['data']['set'];
-            if (is_array($sets)) {
-                foreach ($sets as $key => $value) {
-                    $this->set($key, $value);
-                }
+            foreach ($status['data'] as $key => $value) {
+                $this->set($key, $value);
             }
+
+            $this->set('is_user_logged_in', true);
 
             return true;
         } elseif (is_array($status) && !isset($status['data'])) {
@@ -410,19 +399,11 @@ class RestApi extends Api
      *
      * @return bool response
      **/
-    protected function validate($sig = true)
+    protected function validate()
     {
-        $api_key = $this->request['api_key'];
+        $api_key = $this->input('api_key');
         if (!$api_key) {
             return ['A402' => trans('Api Key not found')];
-        }
-
-        if ($sig) {
-            $api_sig = $this->request['api_sig'];
-
-            if (!$api_sig) {
-                return ['A403' => trans('Api Signature not found')];
-            }
         }
 
         $secret = $this->getSecret($api_key);
@@ -431,14 +412,22 @@ class RestApi extends Api
             return ['A404' => trans('Your api account got suspended')];
         }
 
-        $secret['api_key'] = $api_key;
+        if ($secret['signature']) {
+            $signature = $this->input('signature');
 
-        if ($sig && !$secret['api_secret']) {
+            if (!$signature) {
+                return ['A403' => trans('Api Signature not found')];
+            }
+        }
+
+        if ($secret['signature'] && !$secret['api_secret']) {
             return ['A405' => trans('Api secret not found')];
         }
 
+        $secret['api_key'] = $api_key;
+
         if ($secret['allowed_ip']) {
-            $ipaddr = Utility::ip();
+            $ipaddr = ip();
 
             $allowed = explode(',', $secret['allowed_ip']);
             $allowed = array_map('trim', $allowed);
@@ -528,64 +517,109 @@ class RestApi extends Api
      *
      * @return array data
      **/
-    protected function generateSignature($secret)
+    protected function signature($secret)
     {
-        $str = '';
+        $request = $this->getAuthParams($this->get('request')->all());
+        $payload = $this->payload([], $request);
+        $payload = base64_encode(http_build_query($payload));
 
-        ksort($this->params);
-        // Note: make sure that the signature parameter is not already included in $params
-        foreach ($this->params as $k => $v) {
-            $str .= $k.$v;
-        }
-        $str = $secret.$str;
+        $api_key = $this->input('api_key');
+        $nonce   = $this->input('nonce');
 
-        return md5($str);
+        $payload = implode("\n", [$api_key, $nonce, $payload]);
+
+        $auth = strtoupper($this->input('auth_method'));
+
+        $methods = [
+            'HMAC-SHA256' => 'SHA256',
+            'HMAC-MD5'    => 'MD5',
+            'HMAC-SHA1'   => 'SHA1',
+        ];
+
+        $method = $methods[$auth] ?: 'SHA256';
+
+        return hash_hmac($method, $payload, $secret);
     }
 
-    public function captureRequest()
+    /**
+     * Create the payload.
+     *
+     * @param array $auth
+     * @param array $params
+     *
+     * @return array
+     */
+    protected function payload(array $auth, array $params)
     {
-        $data = [];
-        $data = array_replace_recursive($data, $_GET);
-        $data = array_replace_recursive($data, $_POST);
+        $payload = array_merge($auth, $params);
+        $payload = array_change_key_case($payload, CASE_LOWER);
 
-        $body = file_get_contents('php://input');
-        if ($body) {
-            $content_type = false;
-            if (env('CONTENT_TYPE')) {
-                $content_type = strtolower(env('CONTENT_TYPE'));
-                $content_type = explode(';', $content_type);
-                $content_type = $content_type[0];
-            }
-        }
+        ksort($payload);
 
-        switch ($content_type) {
-            case 'application/json':
-                $body = json_decode($body, true);
-                break;
-        }
-
-        if (is_array($body)) {
-            $data = array_merge_recursive($data, $body);
-        }
-
-        unset($body);
-
-        return $data;
+        return $payload;
     }
 
+    public function handle(Request $request)
+    {
+        $data = $request->all();
+        $request->replace($this->change($data));
+
+        return $this;
+    }
+
+    /**
+     * Send Resonse with proper content type.
+     *
+     * @param string $body        Response Body
+     * @param string $contentType
+     *
+     * @return string
+     */
     public function response($body = '', $contentType = 'text/html')
     {
         $contentType = $contentType ?: 'text/html';
-        // set the content type
+        // Set the content type
         header('Content-type: '.$contentType.'; charset=utf8');
 
         return $body;
     }
 
-    protected function setHeader($code, $message)
+    /**
+     * Get the auth params.
+     *
+     * @param $prefix
+     *
+     * @return array
+     */
+    protected function getAuthParams($params)
     {
+        return array_diff_key($params, $this->headers);
+    }
+
+    /**
+     * Set the proper response header.
+     *
+     * @param string $code
+     * @param string $message
+     */
+    protected function setStatusCode($code, $message)
+    {
+        $codes = [
+            'A402'  => 401,
+            'A403'  => 401,
+            'A404'  => 401,
+            'A405'  => 401,
+            'A406'  => 401,
+            'A407'  => 401,
+            'A407A' => 401,
+            'A401B' => 400,
+            'A402'  => 400,
+        ];
+
         if ($code == '200' || $code == 'OK') {
             header('HTTP/1.1 200 OK');
+        } elseif (isset($codes[$code])) {
+            header('HTTP/1.1 '.$codes[$code].' '.$message);
         } else {
             header('HTTP/1.1 404 '.$message);
         }

@@ -44,7 +44,7 @@ class Resolver extends Di
             return $system;
         }
 
-        $folder = ucfirst($type).'s';
+        $folder = ucfirst($type);
         $option = $this->sanitize($option);
 
         return [
@@ -134,7 +134,7 @@ class Resolver extends Di
         return $response;
     }
 
-    protected function getModel($option)
+    public function getModel($option)
     {
         $option    = $this->sanitize($option);
         $signature = 'model.'.$option;
@@ -384,10 +384,7 @@ class Resolver extends Di
 
             foreach ($paths as $path) {
                 $exists = false;
-                if ($path['file'] && file_exists($path['file'])) {
-                    $exists = true;
-                    include_once $path['file'];
-                } elseif (!$path['file'] && class_exists($path['class'])) {
+                if (class_exists($path['class'])) {
                     $exists = true;
                 }
 
@@ -407,7 +404,7 @@ class Resolver extends Di
         }
 
         if (!$instance) {
-            throw new Exception("Widget '".$name."' not found");
+            throw new Exception("Widget '".$class."' not found");
         }
 
         $beforeRun = 'beforeRun';
